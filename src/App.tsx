@@ -90,6 +90,7 @@ export default function App() {
   const [view, setView] = useState<'roster' | 'staff'>('roster');
   const [showAddNurse, setShowAddNurse] = useState(false);
   const [lang, setLang] = useState<Language>('en');
+  const [showInfo, setShowInfo] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEditCell, setActiveEditCell] = useState<{ nurseId: string, date: string, x: number, y: number } | null>(null);
 
@@ -134,17 +135,39 @@ export default function App() {
       let gnCount = 0;
       let mCount = 0;
       let tCount = 0;
+
+      // Role specific counts
+      let licGD = 0;
+      let licGN = 0;
+      let tecGD = 0;
+      let tecGN = 0;
+
       roster.forEach(r => {
         const dayShift = r.days.find(d => d.date === dateStr)?.shift;
-        if (dayShift === 'GD') gdCount++;
-        if (dayShift === 'GN') gnCount++;
+        const isLic = r.nurse.role === 'Licenciada';
+        const isTec = r.nurse.role === 'Técnico';
+
+        if (dayShift === 'GD') {
+          gdCount++;
+          if (isLic) licGD++;
+          else if (isTec) tecGD++;
+        }
+        if (dayShift === 'GN') {
+          gnCount++;
+          if (isLic) licGN++;
+          else if (isTec) tecGN++;
+        }
         if (dayShift === 'M') mCount++;
         if (dayShift === 'T') tCount++;
       });
-      return { date: dateStr, GD: gdCount, GN: gnCount, M: mCount, T: tCount };
+      return { 
+        date: dateStr, 
+        GD: gdCount, GN: gnCount, M: mCount, T: tCount,
+        licGD, licGN, tecGD, tecGN
+      };
     });
     return dailyCounts;
-  }, [roster, daysInMonth]);
+  }, [daysInMonth, roster]);
 
   const handlePrevMonth = () => setCurrentDate(prev => subMonths(prev, 1));
   const handleNextMonth = () => setCurrentDate(prev => addMonths(prev, 1));
@@ -269,6 +292,14 @@ export default function App() {
           <div className="flex items-center gap-3">
             {/* Language Toggle (Mobile Friendly) */}
             <div className="flex bg-blue-50 p-1 rounded-lg gap-1 border border-blue-100 mr-2 shadow-sm">
+              <button 
+                onClick={() => setShowInfo(true)}
+                className="w-8 h-8 rounded-md flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors mr-1"
+                title={t.aboutApp}
+              >
+                <Info size={18} />
+              </button>
+              <div className="w-px h-6 bg-blue-200/50 my-auto mx-1" />
               <button 
                 onClick={() => setLang('en')}
                 className={cn(
@@ -524,46 +555,81 @@ export default function App() {
                     </React.Fragment>
                   ))}
                 </tbody>
-                <tfoot>
-                  <tr className="bg-gray-50/80 font-mono text-[10px]">
-                    <td className="sticky left-0 z-10 bg-inherit p-4 border-r border-[#E5E5E1] font-bold text-gray-500 uppercase tracking-widest italic">
-                      {t.staffingShift}
+                <tfoot className="border-t-2 border-[#141414]">
+                  {/* Row 1: TOTAL */}
+                  <tr className="bg-gray-100/80 font-mono text-[10px] border-b border-gray-200">
+                    <td className="sticky left-0 z-10 bg-inherit p-3 border-r border-[#E5E5E1] font-black text-gray-700 uppercase tracking-widest text-[11px]">
+                      {t.staffingShift} (ALL)
                     </td>
                     {stats.map((stat, idx) => (
-                      <td key={idx} className="p-1 text-center border-r border-[#E5E5E1]">
-                        <div className="flex flex-col gap-1 min-w-[32px] py-1.5">
-                          <div className="flex items-center justify-center gap-1">
-                            <span className="text-[9px] font-black text-blue-400 uppercase">D</span>
-                            <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-50 px-1 rounded ring-1 ring-blue-100 min-w-[14px]">
-                              {stat.GD}
-                            </span>
+                      <td key={idx} className="p-1 border-r border-[#E5E5E1] bg-gray-50/50">
+                        <div className="flex flex-col items-center justify-center py-1 gap-0.5">
+                          <span className="text-[10px] font-black text-blue-600 leading-none">D:{stat.GD}</span>
+                          <span className="text-[10px] font-black text-indigo-900 leading-none">N:{stat.GN}</span>
+                        </div>
+                      </td>
+                    ))}
+                    <td colSpan={8} className="bg-gray-50/50"></td>
+                  </tr>
+
+                  {/* Row 2: LIC */}
+                  <tr className="bg-white font-mono text-[10px] border-b border-gray-100">
+                    <td className="sticky left-0 z-10 bg-white p-3 border-r border-[#E5E5E1] font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2 text-[11px]">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                      LICENCIADAS
+                    </td>
+                    {stats.map((stat, idx) => (
+                      <td key={idx} className="p-1 border-r border-[#E5E5E1]">
+                        <div className="flex flex-col items-center justify-center gap-1 py-1.5">
+                          <div className={cn(
+                            "px-1.5 py-0.5 rounded font-bold transition-all min-w-[24px] text-center",
+                            stat.licGD < 4 ? "bg-red-50 text-red-600 ring-1 ring-red-100" : "bg-blue-50 text-blue-700"
+                          )}>
+                            {stat.licGD}D
                           </div>
-                          <div className="flex items-center justify-center gap-1">
-                            <span className="text-[9px] font-black text-indigo-400 uppercase">N</span>
-                            <span className="text-[11px] font-mono font-bold text-white bg-indigo-900 px-1 rounded min-w-[14px]">
-                              {stat.GN}
-                            </span>
+                          <div className={cn(
+                            "px-1.5 py-0.5 rounded font-bold text-white transition-all min-w-[24px] text-center",
+                            stat.licGN < 4 ? "bg-red-600 shadow-sm" : "bg-indigo-900 shadow-sm"
+                          )}>
+                            {stat.licGN}N
                           </div>
-                          {(stat.M > 0 || stat.T > 0) && (
-                            <div className="mt-1 pt-1 border-t border-gray-100 flex flex-col gap-0.5">
-                              {stat.M > 0 && (
-                                <div className="flex items-center justify-center gap-0.5">
-                                  <span className="text-[7px] font-black text-teal-400 uppercase">M</span>
-                                  <span className="text-[9px] font-mono font-bold text-teal-700 bg-teal-50 px-0.5 rounded outline outline-teal-100">
-                                    {stat.M}
-                                  </span>
-                                </div>
-                              )}
-                              {stat.T > 0 && (
-                                <div className="flex items-center justify-center gap-0.5">
-                                  <span className="text-[7px] font-black text-orange-400 uppercase">T</span>
-                                  <span className="text-[9px] font-mono font-bold text-orange-700 bg-orange-50 px-0.5 rounded outline outline-orange-100">
-                                    {stat.T}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                        </div>
+                      </td>
+                    ))}
+                    <td colSpan={8}></td>
+                  </tr>
+
+                  {/* Row 3: TEC */}
+                  <tr className="bg-white font-mono text-[10px] border-b border-gray-100">
+                    <td className="sticky left-0 z-10 bg-white p-3 border-r border-[#E5E5E1] font-bold text-blue-400 uppercase tracking-widest flex items-center gap-2 text-[11px]">
+                       <div className="w-1.5 h-1.5 rounded-full bg-blue-300" />
+                       TÉCNICOS
+                    </td>
+                    {stats.map((stat, idx) => (
+                      <td key={idx} className="p-1 border-r border-[#E5E5E1]">
+                        <div className="flex flex-col items-center justify-center gap-1 py-1.5">
+                          <div className="px-1.5 py-0.5 rounded font-bold text-blue-500 bg-gray-50 border border-blue-50 min-w-[24px] text-center">
+                            {stat.tecGD}D
+                          </div>
+                          <div className="px-1.5 py-0.5 rounded font-bold text-indigo-400 bg-indigo-50 border border-indigo-100 min-w-[24px] text-center">
+                            {stat.tecGN}N
+                          </div>
+                        </div>
+                      </td>
+                    ))}
+                    <td colSpan={8}></td>
+                  </tr>
+
+                  {/* Row 4: Auxiliary (M/T) - Only if they exist in the month */}
+                  <tr className="bg-gray-50/30 font-mono text-[9px]">
+                    <td className="sticky left-0 z-10 bg-inherit p-3 border-r border-[#E5E5E1] font-bold text-gray-400 uppercase tracking-widest text-[11px]">
+                      REFUERZO (M/T)
+                    </td>
+                    {stats.map((stat, idx) => (
+                      <td key={idx} className="p-1 border-r border-[#E5E5E1]">
+                        <div className="flex flex-col items-center justify-center gap-0.5 opacity-60 min-h-[20px]">
+                          {stat.M > 0 && <span className="text-teal-600 font-bold leading-none">M:{stat.M}</span>}
+                          {stat.T > 0 && <span className="text-orange-600 font-bold leading-none">T:{stat.T}</span>}
                         </div>
                       </td>
                     ))}
@@ -935,6 +1001,69 @@ export default function App() {
                 className="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-700 hover:bg-white transition-all shadow-sm active:scale-95"
               >
                 Close
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Info Modal */}
+      {showInfo && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden relative"
+          >
+            <div className="p-8 pb-4">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                  <Stethoscope size={24} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black tracking-tight text-gray-900 leading-none">Hospithro</h3>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-2">{t.aboutApp}</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <section>
+                  <h4 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-blue-600 mb-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                    {t.howItWorks}
+                  </h4>
+                  <p className="text-gray-600 leading-relaxed text-sm font-medium">
+                    {t.howItWorksDesc}
+                  </p>
+                </section>
+
+                <section>
+                  <h4 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-blue-600 mb-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                    {t.features}
+                  </h4>
+                  <ul className="grid grid-cols-1 gap-2.5">
+                    {[t.feature1, t.feature2, t.feature3, t.feature4].map((f, i) => (
+                      <li key={i} className="flex gap-3 p-3 bg-gray-50/50 rounded-xl border border-gray-100 hover:bg-white hover:border-blue-100 transition-all duration-300">
+                        <div className="mt-1">
+                          <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center">
+                            <div className="w-1 h-1 rounded-full bg-blue-600" />
+                          </div>
+                        </div>
+                        <span className="text-xs font-semibold text-gray-700 leading-snug">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
+            </div>
+
+            <div className="p-8 bg-gray-50/50 border-t border-gray-100 flex justify-end">
+              <button 
+                onClick={() => setShowInfo(false)}
+                className="px-8 py-3 rounded-2xl bg-gray-900 text-white text-sm font-black uppercase tracking-widest shadow-xl hover:bg-gray-800 active:scale-95 transition-all"
+              >
+                {t.close}
               </button>
             </div>
           </motion.div>
