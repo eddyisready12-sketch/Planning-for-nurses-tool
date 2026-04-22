@@ -30,8 +30,11 @@ import {
   Filter,
   Palmtree,
   CalendarDays,
-  X
+  X,
+  Check,
+  FileSpreadsheet
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import { Nurse, NurseRoster, ShiftType } from './types';
@@ -212,6 +215,49 @@ export default function App() {
     }));
   };
 
+  const handleExportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    
+    // Prepare data
+    const data = roster.map(r => {
+      const row: any = {
+        [t.fullName]: r.nurse.name,
+        [t.role]: t.roles[r.nurse.role as keyof typeof t.roles],
+        [t.group]: t.groupLabels[r.nurse.groupId as keyof typeof t.groupLabels],
+      };
+      
+      // Add days
+      daysInMonth.forEach(day => {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        const dayShift = r.days.find(d => d.date === dateStr)?.shift;
+        row[format(day, 'dd')] = dayShift || '';
+      });
+      
+      // Calculate total hours
+      const totalHours = r.days.reduce((sum, d) => sum + SHIFT_HOURS[d.shift], 0);
+      row['Hrs'] = totalHours;
+      
+      return row;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    
+    // Auto-size columns (rough estimate)
+    const maxWidths = [
+      { wch: 30 }, // Name
+      { wch: 15 }, // Role
+      { wch: 35 }, // Group
+      ...daysInMonth.map(() => ({ wch: 4 })), // Days
+      { wch: 6 }  // Hrs
+    ];
+    worksheet['!cols'] = maxWidths;
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, format(currentDate, 'MMM yyyy'));
+    
+    const fileName = `Roster_${format(currentDate, 'yyyy_MM')}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   const setManualShift = (nurseId: string, date: string, shift: ShiftType | null) => {
     setNurses(nurses.map(n => {
       if (n.id === nurseId) {
@@ -337,6 +383,13 @@ export default function App() {
               </button>
             </div>
             
+            <button 
+              onClick={handleExportExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all shadow-sm text-green-700"
+            >
+              <FileSpreadsheet size={16} />
+              {t.exportExcel}
+            </button>
             <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all shadow-sm">
               <Download size={16} />
               {t.exportPdf}
@@ -439,9 +492,9 @@ export default function App() {
             {/* Roster Grid Container */}
             <div className="bg-white border border-[#E5E5E1] rounded-2xl shadow-sm overflow-hidden overflow-x-auto relative">
               <table className="w-full border-collapse table-fixed min-w-[2000px]">
-                <thead className="bg-[#F9F9F8] border-bottom-2 border-[#141414]">
+                <thead className="bg-[#F9F9F8] border-b-2 border-[#141414] sticky top-0 z-30 shadow-sm">
                   <tr>
-                    <th className="sticky left-0 z-10 w-64 bg-[#F9F9F8] p-4 text-left font-mono text-[11px] uppercase tracking-wider text-gray-500 border-r border-[#E5E5E1]">
+                    <th className="sticky left-0 top-0 z-40 w-64 bg-[#F9F9F8] p-4 text-left font-mono text-[11px] uppercase tracking-wider text-gray-500 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                       Staff Name
                     </th>
                     {daysInMonth.map(day => (
@@ -473,22 +526,27 @@ export default function App() {
                   {(Object.entries(groupedRoster) as [string, NurseRoster[]][]).map(([groupId, groupRows]) => (
                     <React.Fragment key={groupId}>
                       {/* Group Header Row */}
-                      <tr className="bg-gray-100/50 border-y border-[#E5E5E1]">
+                      <tr className="bg-gray-50/80 border-y border-[#E5E5E1] backdrop-blur-sm">
                         <td 
                           colSpan={daysInMonth.length + 9} 
-                          className="p-3 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 bg-gray-50/50 flex justify-between items-center"
+                          className="p-0 border-r border-[#E5E5E1]"
                         >
-                          <span>{t.groupLabels[groupId as keyof typeof t.groupLabels] || groupId}</span>
-                          <span className="text-gray-300 ml-4 font-mono">({groupRows.length})</span>
+                          <div className="sticky left-0 z-10 flex items-center gap-4 px-4 py-3">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 bg-white/50 px-2 py-1 rounded border border-gray-100 shadow-sm">
+                              {t.groupLabels[groupId as keyof typeof t.groupLabels] || groupId}
+                            </span>
+                            <span className="text-[9px] font-mono font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                              {groupRows.length} {t.staffing}
+                            </span>
+                          </div>
                         </td>
                       </tr>
                       {groupRows.map((row) => (
-                        <motion.tr 
-                          layout
+                        <tr 
                           key={row.nurse.id} 
                           className="group hover:bg-[#141414] hover:text-white transition-colors duration-150 cursor-default"
                         >
-                          <td className="sticky left-0 z-10 bg-white group-hover:bg-[#141414] p-4 border-r border-[#E5E5E1] font-mono text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis shadow-[4px_0_10px_rgba(0,0,0,0.02)] group-hover:shadow-none transition-colors">
+                          <td className="sticky left-0 z-20 bg-white group-hover:bg-[#141414] p-4 border-r border-[#E5E5E1] font-mono text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis shadow-[4px_0_10px_rgba(0,0,0,0.03)] group-hover:shadow-none transition-colors">
                             <div className="flex flex-col">
                               <span>{row.nurse.name}</span>
                               <span className="text-[9px] opacity-40 uppercase font-bold group-hover:opacity-60">{t.roles[row.nurse.role as keyof typeof t.roles] || row.nurse.role}</span>
@@ -550,22 +608,28 @@ export default function App() {
                           <td className="p-2 text-center font-mono text-xs font-black bg-blue-50/30 text-blue-700 group-hover:bg-transparent">
                             {row.totalHours}h
                           </td>
-                        </motion.tr>
+                        </tr>
                       ))}
                     </React.Fragment>
                   ))}
                 </tbody>
-                <tfoot className="border-t-2 border-[#141414]">
+                <tfoot className="border-t-2 border-[#141414] sticky bottom-0 z-30 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
                   {/* Row 1: TOTAL */}
-                  <tr className="bg-gray-100/80 font-mono text-[10px] border-b border-gray-200">
-                    <td className="sticky left-0 z-10 bg-gray-100 p-3 border-r border-[#E5E5E1] font-black text-gray-700 uppercase tracking-widest text-[11px]">
-                      {t.staffingShift} (ALL)
+                  <tr className="bg-gray-100 font-mono text-[10px] border-b border-gray-200">
+                    <td className="sticky left-0 z-40 bg-gray-100 p-3 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center justify-between font-black text-gray-700 uppercase tracking-widest text-[11px] whitespace-nowrap gap-4">
+                        <span>{t.staffingShift} (ALL)</span>
+                        <div className="flex flex-col text-[10px] text-gray-500 font-mono leading-none border-l border-gray-300 pl-2 font-bold gap-1">
+                          <span>DAY</span>
+                          <span>NIGHT</span>
+                        </div>
+                      </div>
                     </td>
                     {stats.map((stat, idx) => (
                       <td key={idx} className="p-1 border-r border-[#E5E5E1] bg-gray-50/50">
-                        <div className="flex flex-col items-center justify-center py-1 gap-0.5">
-                          <span className="text-[10px] font-black text-blue-600 leading-none">D:{stat.GD}</span>
-                          <span className="text-[10px] font-black text-indigo-900 leading-none">N:{stat.GN}</span>
+                        <div className="flex flex-col items-center justify-center py-1 gap-1">
+                          <span className="text-[10px] font-black text-blue-600 leading-none">{stat.GD}</span>
+                          <span className="text-[10px] font-black text-indigo-900 leading-none">{stat.GN}</span>
                         </div>
                       </td>
                     ))}
@@ -574,24 +638,34 @@ export default function App() {
 
                   {/* Row 2: LIC */}
                   <tr className="bg-white font-mono text-[10px] border-b border-gray-100">
-                    <td className="sticky left-0 z-10 bg-white p-3 border-r border-[#E5E5E1] font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2 text-[11px]">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                      LICENCIADAS
+                    <td className="sticky left-0 z-40 bg-white p-3 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center justify-between text-blue-600 font-bold uppercase tracking-widest text-[11px] whitespace-nowrap gap-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
+                          LICENCIADAS
+                        </div>
+                        <div className="flex flex-col text-[10px] text-gray-800 font-mono leading-none border-l border-gray-300 pl-2 font-bold gap-1 mt-0.5">
+                          <span>DAY</span>
+                          <span>NIGHT</span>
+                        </div>
+                      </div>
                     </td>
                     {stats.map((stat, idx) => (
                       <td key={idx} className="p-1 border-r border-[#E5E5E1]">
                         <div className="flex flex-col items-center justify-center gap-1 py-1.5">
                           <div className={cn(
-                            "px-1.5 py-0.5 rounded font-bold transition-all min-w-[24px] text-center",
-                            stat.licGD < 4 ? "bg-red-50 text-red-600 ring-1 ring-red-100" : "bg-blue-50 text-blue-700"
+                            "px-1.5 py-0.5 rounded font-bold transition-all min-w-[28px] text-center flex items-center justify-center gap-0.5",
+                            stat.licGD < 4 ? "bg-red-50 text-red-600 ring-1 ring-red-100" : "bg-blue-50 text-blue-700 font-black"
                           )}>
-                            {stat.licGD}D
+                            {stat.licGD}
+                            {stat.licGD >= 4 && <Check size={10} className="text-green-600 stroke-[4px]" />}
                           </div>
                           <div className={cn(
-                            "px-1.5 py-0.5 rounded font-bold text-white transition-all min-w-[24px] text-center",
-                            stat.licGN < 4 ? "bg-red-600 shadow-sm" : "bg-indigo-900 shadow-sm"
+                            "px-1.5 py-0.5 rounded font-bold text-white transition-all min-w-[28px] text-center flex items-center justify-center gap-0.5",
+                            stat.licGN < 4 ? "bg-red-600 shadow-sm" : "bg-indigo-900 shadow-sm font-black"
                           )}>
-                            {stat.licGN}N
+                            {stat.licGN}
+                            {stat.licGN >= 4 && <Check size={10} className="text-emerald-400 stroke-[4px]" />}
                           </div>
                         </div>
                       </td>
@@ -601,18 +675,26 @@ export default function App() {
 
                   {/* Row 3: TEC */}
                   <tr className="bg-white font-mono text-[10px] border-b border-gray-100">
-                    <td className="sticky left-0 z-10 bg-white p-3 border-r border-[#E5E5E1] font-bold text-blue-400 uppercase tracking-widest flex items-center gap-2 text-[11px]">
-                       <div className="w-1.5 h-1.5 rounded-full bg-blue-300" />
-                       TÉCNICOS
+                    <td className="sticky left-0 z-40 bg-white p-3 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                       <div className="flex items-center justify-between text-blue-400 font-bold uppercase tracking-widest text-[11px] whitespace-nowrap gap-4">
+                         <div className="flex items-center gap-2">
+                           <div className="w-1.5 h-1.5 rounded-full bg-blue-300 shrink-0" />
+                           TÉCNICOS
+                         </div>
+                          <div className="flex flex-col text-[10px] text-gray-800 font-mono leading-none border-l border-gray-300 pl-2 font-bold gap-1 mt-0.5">
+                            <span>DAY</span>
+                            <span>NIGHT</span>
+                          </div>
+                       </div>
                     </td>
                     {stats.map((stat, idx) => (
                       <td key={idx} className="p-1 border-r border-[#E5E5E1]">
                         <div className="flex flex-col items-center justify-center gap-1 py-1.5">
                           <div className="px-1.5 py-0.5 rounded font-bold text-blue-500 bg-gray-50 border border-blue-50 min-w-[24px] text-center">
-                            {stat.tecGD}D
+                            {stat.tecGD}
                           </div>
                           <div className="px-1.5 py-0.5 rounded font-bold text-indigo-400 bg-indigo-50 border border-indigo-100 min-w-[24px] text-center">
-                            {stat.tecGN}N
+                            {stat.tecGN}
                           </div>
                         </div>
                       </td>
@@ -621,15 +703,21 @@ export default function App() {
                   </tr>
 
                   {/* Row 4: Auxiliary (M/T) - Only if they exist in the month */}
-                  <tr className="bg-gray-50/30 font-mono text-[9px]">
-                    <td className="sticky left-0 z-10 bg-gray-50 p-3 border-r border-[#E5E5E1] font-bold text-gray-400 uppercase tracking-widest text-[11px]">
-                      REFUERZO (M/T)
+                  <tr className="bg-gray-50 font-mono text-[9px]">
+                    <td className="sticky left-0 z-40 bg-gray-50 p-3 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center justify-between text-gray-400 font-bold uppercase tracking-widest text-[11px] whitespace-nowrap gap-4">
+                        <span>REFUERZO (M/T)</span>
+                        <div className="flex flex-col text-[10px] text-gray-500 font-mono leading-none border-l border-gray-300 pl-2 font-bold gap-1.5">
+                          <span>MORN</span>
+                          <span>AFTN</span>
+                        </div>
+                      </div>
                     </td>
                     {stats.map((stat, idx) => (
                       <td key={idx} className="p-1 border-r border-[#E5E5E1]">
                         <div className="flex flex-col items-center justify-center gap-0.5 opacity-60 min-h-[20px]">
-                          {stat.M > 0 && <span className="text-teal-600 font-bold leading-none">M:{stat.M}</span>}
-                          {stat.T > 0 && <span className="text-orange-600 font-bold leading-none">T:{stat.T}</span>}
+                          {stat.M > 0 && <span className="text-teal-600 font-bold leading-none">{stat.M}</span>}
+                          {stat.T > 0 && <span className="text-orange-600 font-bold leading-none">{stat.T}</span>}
                         </div>
                       </td>
                     ))}
