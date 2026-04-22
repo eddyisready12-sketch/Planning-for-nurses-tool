@@ -1,0 +1,6 @@
+{
+  "name": "Hospithro - Medical Roster Maker",
+  "description": "Professional hospital shift scheduler with automatic 1-1-3 rotation management (Day, Night, 3 Off), vacation handling, and 144-hour monthly target tracking for nursing teams.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
