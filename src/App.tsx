@@ -404,41 +404,41 @@ export default function App() {
             </div>
 
             {/* Grid Legend */}
-            <div className="flex flex-wrap items-center gap-4 text-xs font-mono mb-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-              <span className="text-gray-400 uppercase tracking-widest mr-2">{t.legend}:</span>
-              <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-mono mb-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+              <span className="text-gray-400 uppercase tracking-widest mr-2 font-black">{t.legend}:</span>
+              <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
                 <span className="w-8 h-6 flex items-center justify-center rounded bg-blue-100 text-blue-700 font-bold border border-blue-200">D</span>
-                <span className="text-gray-600">{t.dayGuard} (12h)</span>
+                <span className="text-gray-600 font-medium">{t.dayGuard} (12h)</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
                 <span className="w-8 h-6 flex items-center justify-center rounded bg-indigo-900 text-indigo-50 font-bold border border-indigo-950">N</span>
-                <span className="text-gray-600">{t.nightGuard} (12h)</span>
+                <span className="text-gray-600 font-medium">{t.nightGuard} (12h)</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
                 <span className="w-8 h-6 flex items-center justify-center rounded bg-teal-50 text-teal-700 font-bold border border-teal-100">M</span>
-                <span className="text-gray-600">{t.morning} (6h)</span>
+                <span className="text-gray-600 font-medium">{t.morning} (6h)</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
                 <span className="w-8 h-6 flex items-center justify-center rounded bg-orange-50 text-orange-700 font-bold border border-orange-100">T</span>
-                <span className="text-gray-600">{t.afternoon} (6h)</span>
+                <span className="text-gray-600 font-medium">{t.afternoon} (6h)</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
                 <span className="w-8 h-6 flex items-center justify-center rounded bg-amber-100 text-amber-700 font-bold border border-amber-200">O</span>
-                <span className="text-gray-600">{t.birthday}</span>
+                <span className="text-gray-600 font-medium">{t.birthday}</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
                 <span className="w-8 h-6 flex items-center justify-center rounded bg-gray-50 text-gray-400 font-bold border border-gray-100">L</span>
-                <span className="text-gray-600">{t.off} (L)</span>
+                <span className="text-gray-600 font-medium">{t.off} (L)</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
                 <span className="w-10 h-6 flex items-center justify-center rounded bg-rose-100 text-rose-700 font-bold border border-rose-200 text-[10px]">VAC</span>
-                <span className="text-gray-600">{t.vacation}</span>
+                <span className="text-gray-600 font-medium">{t.vacation}</span>
               </div>
             </div>
 
             {/* Roster Grid Container */}
-            <div className="bg-white border border-[#E5E5E1] rounded-2xl shadow-sm overflow-hidden overflow-x-auto relative no-scrollbar">
-              <table className="w-full border-collapse table-fixed min-w-[1200px]">
+            <div className="bg-white border border-[#E5E5E1] rounded-2xl shadow-sm overflow-hidden overflow-x-auto relative">
+              <table className="w-full border-collapse table-fixed min-w-[2000px]">
                 <thead className="bg-[#F9F9F8] border-bottom-2 border-[#141414]">
                   <tr>
                     <th className="sticky left-0 z-10 w-64 bg-[#F9F9F8] p-4 text-left font-mono text-[11px] uppercase tracking-wider text-gray-500 border-r border-[#E5E5E1]">
@@ -446,7 +446,7 @@ export default function App() {
                     </th>
                     {daysInMonth.map(day => (
                       <th key={day.toISOString()} className={cn(
-                        "p-2 text-center border-r border-[#E5E5E1]",
+                        "w-12 p-2 text-center border-r border-[#E5E5E1]",
                         format(day, 'EEEEEE') === 'Su' ? "bg-red-50/30" : ""
                       )}>
                         <div className="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">
@@ -488,7 +488,7 @@ export default function App() {
                           key={row.nurse.id} 
                           className="group hover:bg-[#141414] hover:text-white transition-colors duration-150 cursor-default"
                         >
-                          <td className="sticky left-0 z-10 bg-inherit p-4 border-r border-[#E5E5E1] font-mono text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis shadow-[4px_0_10px_rgba(0,0,0,0.02)] group-hover:shadow-none">
+                          <td className="sticky left-0 z-10 bg-white group-hover:bg-[#141414] p-4 border-r border-[#E5E5E1] font-mono text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis shadow-[4px_0_10px_rgba(0,0,0,0.02)] group-hover:shadow-none transition-colors">
                             <div className="flex flex-col">
                               <span>{row.nurse.name}</span>
                               <span className="text-[9px] opacity-40 uppercase font-bold group-hover:opacity-60">{t.roles[row.nurse.role as keyof typeof t.roles] || row.nurse.role}</span>
@@ -558,7 +558,7 @@ export default function App() {
                 <tfoot className="border-t-2 border-[#141414]">
                   {/* Row 1: TOTAL */}
                   <tr className="bg-gray-100/80 font-mono text-[10px] border-b border-gray-200">
-                    <td className="sticky left-0 z-10 bg-inherit p-3 border-r border-[#E5E5E1] font-black text-gray-700 uppercase tracking-widest text-[11px]">
+                    <td className="sticky left-0 z-10 bg-gray-100 p-3 border-r border-[#E5E5E1] font-black text-gray-700 uppercase tracking-widest text-[11px]">
                       {t.staffingShift} (ALL)
                     </td>
                     {stats.map((stat, idx) => (
@@ -622,7 +622,7 @@ export default function App() {
 
                   {/* Row 4: Auxiliary (M/T) - Only if they exist in the month */}
                   <tr className="bg-gray-50/30 font-mono text-[9px]">
-                    <td className="sticky left-0 z-10 bg-inherit p-3 border-r border-[#E5E5E1] font-bold text-gray-400 uppercase tracking-widest text-[11px]">
+                    <td className="sticky left-0 z-10 bg-gray-50 p-3 border-r border-[#E5E5E1] font-bold text-gray-400 uppercase tracking-widest text-[11px]">
                       REFUERZO (M/T)
                     </td>
                     {stats.map((stat, idx) => (
