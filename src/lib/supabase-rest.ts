@@ -2,12 +2,33 @@ import { format } from 'date-fns';
 import { Nurse, NurseRoster, ShiftType, StaffGroupId } from '../types';
 import { STAFF_GROUP_LABELS } from '../constants';
 
-const SUPABASE_URL =
-  import.meta.env.VITE_SUPABASE_URL || 'https://rigjfrwyhpmlexjasafz.supabase.co';
-const SUPABASE_ANON_KEY =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpZ2pmcnd5aHBtbGV4amFzYWZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjcwMjAsImV4cCI6MjA5MjY0MzAyMH0.VVCB5i__XrrtdweNwcMp_klAbiI-fCx8DLsCxqSUrFA';
-const PAGE_SLUG = import.meta.env.VITE_SUPABASE_PAGE_SLUG || 'main-roster';
+type StoredSupabaseConfig = {
+  url?: string;
+  anonKey?: string;
+  pageSlug?: string;
+};
+
+function getStoredConfig(): StoredSupabaseConfig {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+
+  try {
+    return JSON.parse(window.localStorage.getItem('hospithro.supabase.config') || '{}') as StoredSupabaseConfig;
+  } catch {
+    return {};
+  }
+}
+
+function getSupabaseConfig() {
+  const stored = getStoredConfig();
+
+  return {
+    url: import.meta.env.VITE_SUPABASE_URL || stored.url || '',
+    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || stored.anonKey || '',
+    pageSlug: import.meta.env.VITE_SUPABASE_PAGE_SLUG || stored.pageSlug || 'main-roster',
+  };
+}
 
 const GROUP_NAME_TO_ID = Object.entries(STAFF_GROUP_LABELS).reduce((acc, [key, value]) => {
   acc[value] = key as StaffGroupId;
@@ -59,20 +80,25 @@ type MonthlyPlanRow = {
 };
 
 function isConfigured() {
-  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+  const { url, anonKey } = getSupabaseConfig();
+  return Boolean(url && anonKey);
 }
 
 function getHeaders(extra: Record<string, string> = {}) {
+  const { anonKey } = getSupabaseConfig();
+
   return {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    apikey: anonKey,
+    Authorization: `Bearer ${anonKey}`,
     'Content-Type': 'application/json',
     ...extra,
   };
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+  const { url } = getSupabaseConfig();
+
+  const response = await fetch(`${url}/rest/v1/${path}`, {
     ...options,
     headers: getHeaders(options.headers as Record<string, string>),
   });
@@ -150,25 +176,26 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
     return {
       configured: false,
       nurses: fallbackNurses,
-      status: 'Supabase is not configured yet.',
+      status: 'Supabase is not configured yet. Add connection details outside GitHub code.',
     };
   }
 
   const monthKey = format(currentDate, 'yyyy-MM');
+  const { pageSlug } = getSupabaseConfig();
   const fallbackByName = new Map(fallbackNurses.map((nurse) => [normalizeName(nurse.name), nurse]));
 
   const [staffRows, leaveRows, assignmentRows, planRows] = await Promise.all([
     request<StaffMemberRow[]>(
-      `staff_members?select=full_name,group_name,sort_order&page_slug=eq.${encodeURIComponent(PAGE_SLUG)}&active=eq.true&order=sort_order.asc`
+      `staff_members?select=full_name,group_name,sort_order&page_slug=eq.${encodeURIComponent(pageSlug)}&active=eq.true&order=sort_order.asc`
     ),
     request<LeaveEntryRow[]>(
-      `leave_entries?select=staff_name,leave_code,start_date,end_date&page_slug=eq.${encodeURIComponent(PAGE_SLUG)}&order=start_date.asc`
+      `leave_entries?select=staff_name,leave_code,start_date,end_date&page_slug=eq.${encodeURIComponent(pageSlug)}&order=start_date.asc`
     ),
     request<AssignmentRow[]>(
-      `roster_assignments?select=staff_name,work_date,shift_code&page_slug=eq.${encodeURIComponent(PAGE_SLUG)}&month_key=eq.${monthKey}`
+      `roster_assignments?select=staff_name,work_date,shift_code&page_slug=eq.${encodeURIComponent(pageSlug)}&month_key=eq.${monthKey}`
     ),
     request<MonthlyPlanRow[]>(
-      `monthly_plans?select=month_key&page_slug=eq.${encodeURIComponent(PAGE_SLUG)}&month_key=eq.${monthKey}&limit=1`
+      `monthly_plans?select=month_key&page_slug=eq.${encodeURIComponent(pageSlug)}&month_key=eq.${monthKey}&limit=1`
     ),
   ]);
 
@@ -245,10 +272,11 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
 
 export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster: NurseRoster[]) {
   if (!isConfigured()) {
-    throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+    throw new Error('Supabase is not configured. Add it through environment variables or browser storage.');
   }
 
   const monthKey = format(currentDate, 'yyyy-MM');
+  const { pageSlug } = getSupabaseConfig();
 
   await request('roster_pages?on_conflict=page_slug', {
     method: 'POST',
@@ -257,27 +285,27 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
     },
     body: JSON.stringify([
       {
-        page_slug: PAGE_SLUG,
+        page_slug: pageSlug,
         display_name: 'Hospithro',
       },
     ]),
   });
 
-  await request(`personnel_groups?page_slug=eq.${encodeURIComponent(PAGE_SLUG)}`, { method: 'DELETE' });
-  await request(`staff_members?page_slug=eq.${encodeURIComponent(PAGE_SLUG)}`, { method: 'DELETE' });
-  await request(`leave_entries?page_slug=eq.${encodeURIComponent(PAGE_SLUG)}`, { method: 'DELETE' });
-  await request(`roster_assignments?page_slug=eq.${encodeURIComponent(PAGE_SLUG)}&month_key=eq.${monthKey}`, { method: 'DELETE' });
+  await request(`personnel_groups?page_slug=eq.${encodeURIComponent(pageSlug)}`, { method: 'DELETE' });
+  await request(`staff_members?page_slug=eq.${encodeURIComponent(pageSlug)}`, { method: 'DELETE' });
+  await request(`leave_entries?page_slug=eq.${encodeURIComponent(pageSlug)}`, { method: 'DELETE' });
+  await request(`roster_assignments?page_slug=eq.${encodeURIComponent(pageSlug)}&month_key=eq.${monthKey}`, { method: 'DELETE' });
 
   const uniqueGroups = Array.from(new Set(nurses.map((nurse) => nurse.groupId)));
   const groupRows = uniqueGroups.map((groupId, index) => ({
-    page_slug: PAGE_SLUG,
+    page_slug: pageSlug,
     name: STAFF_GROUP_LABELS[groupId],
     sort_order: index,
   }));
   await insertChunked('personnel_groups', groupRows);
 
   const staffRows = nurses.map((nurse, index) => ({
-    page_slug: PAGE_SLUG,
+    page_slug: pageSlug,
     group_name: STAFF_GROUP_LABELS[nurse.groupId],
     full_name: nurse.name,
     sort_order: index,
@@ -287,7 +315,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
 
   const leaveRows = nurses.flatMap((nurse) => [
     ...nurse.vacations.map((range) => ({
-      page_slug: PAGE_SLUG,
+      page_slug: pageSlug,
       staff_name: nurse.name,
       leave_code: 'VAC',
       start_date: range.start,
@@ -296,7 +324,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
     ...Object.entries(nurse.overrides || {})
       .filter(([, shift]) => shift === 'O')
       .map(([date]) => ({
-        page_slug: PAGE_SLUG,
+        page_slug: pageSlug,
         staff_name: nurse.name,
         leave_code: 'O',
         start_date: date,
@@ -315,7 +343,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
     },
     body: JSON.stringify([
       {
-        page_slug: PAGE_SLUG,
+        page_slug: pageSlug,
         month_key: monthKey,
         target_hours: 144,
         shift_hours: 12,
@@ -329,7 +357,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
 
   const assignmentRows = roster.flatMap((item) =>
     item.days.map((day) => ({
-      page_slug: PAGE_SLUG,
+      page_slug: pageSlug,
       month_key: monthKey,
       staff_name: item.nurse.name,
       group_name: STAFF_GROUP_LABELS[item.nurse.groupId],

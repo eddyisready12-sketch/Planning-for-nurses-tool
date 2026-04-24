@@ -44,49 +44,7 @@ import { TRANSLATIONS, Language } from './lib/translations';
 import { loadFromSupabase, saveToSupabase } from './lib/supabase-rest';
 
 // Initial data based on the user's spreadsheet groupings
-const INITIAL_NURSES: Nurse[] = [
-  // LICENCIADAS NOMBRADOS
-  { id: '1', name: 'LIC. HUALLPA LEON DINA', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 0, vacations: [{ start: '2026-05-01', end: '2026-05-15' }], hiringDate: '2020-01-01' },
-  { id: '2', name: 'LIC. QUILLATUPA VIDAL ROSA LIZ', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 1, vacations: [], hiringDate: '2020-01-01' },
-  { id: '3', name: 'LIC. MONTORO LILIANA', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 2, vacations: [], hiringDate: '2020-01-01' },
-  { id: '4', name: 'LIC. VASQUEZ OROPEZA VANESSA', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 3, vacations: [], hiringDate: '2020-01-01' },
-  { id: '5', name: 'LIC. ARANDA DEPAZ YUDY MARLA', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 4, vacations: [], hiringDate: '2020-01-01' },
-  { id: '6', name: 'LIC. LUNA DE LA CRUZ GERTRUDIS FLOR', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 0, vacations: [], hiringDate: '2020-01-01' },
-  { id: '7', name: 'LIC. VILLACHICA TOSCANO NELLY', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 1, vacations: [], hiringDate: '2020-01-01' },
-  { id: '8', name: 'LIC. SALAZAR SANCHEZ ADRIANA ROSARIO', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 2, vacations: [], hiringDate: '2020-01-01' },
-  { id: '9', name: 'LIC. ROBLES CACERES GLADYS MERCEDES', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 3, vacations: [], hiringDate: '2020-01-01' },
-  { id: '10', name: 'LIC. ZORRILLA DE CUADROS MAXIMINA', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 4, vacations: [], hiringDate: '2020-01-01' },
-  { id: '11', name: 'LIC. GONZALES CRISOSTOMO GEORGINA PAOLA', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 0, vacations: [], hiringDate: '2020-01-01' },
-  { id: '12', name: 'LIC. JACOME MAGUIÑA ELIDA MARY', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 1, vacations: [], hiringDate: '2020-01-01' },
-  { id: '13', name: 'LIC. COLONIA SILVA TATIANA', role: 'Licenciada', groupId: 'LIC_NOMBRADOS', teamId: 2, vacations: [], hiringDate: '2020-01-01' },
-  
-  // ENFERMERAS CAS
-  { id: '14', name: 'LIC. BAZAN PERA EDITH', role: 'Licenciada', groupId: 'LIC_CAS', teamId: 3, vacations: [], hiringDate: '2020-01-01' },
-  { id: '15', name: 'LIC. JESUS ESCUDERO LEONOR LUCINDA', role: 'Licenciada', groupId: 'LIC_CAS', teamId: 4, vacations: [], hiringDate: '2020-01-01' },
-  { id: '25', name: 'LIC. RODRIGUEZ LOPEZ FLOR DE MARIA', role: 'Licenciada', groupId: 'LIC_CAS', teamId: 0, vacations: [], hiringDate: '2020-01-01' },
-  { id: '26', name: 'LIC. SALVADOR GIRALDO VANESSA VERONICA', role: 'Licenciada', groupId: 'LIC_CAS', teamId: 1, vacations: [], hiringDate: '2020-01-01' },
-  { id: '27', name: 'LIC. HUAYANEY CADILLO KARINA', role: 'Licenciada', groupId: 'LIC_CAS', teamId: 2, vacations: [], hiringDate: '2020-01-01' },
-  { id: '28', name: 'LIC. PANTOJA DOMINGUEZ ROSARIO ERIKA', role: 'Licenciada', groupId: 'LIC_CAS', teamId: 3, vacations: [], hiringDate: '2020-01-01' },
-  { id: '29', name: 'LIC. LIÑAN SANTOYO HELENE ELIZABETH', role: 'Licenciada', groupId: 'LIC_CAS', teamId: 4, vacations: [], hiringDate: '2020-01-01' },
-  { id: '30', name: 'LIC. PICON OSORIO KATHERINE MILAGROS', role: 'Licenciada', groupId: 'LIC_CAS', teamId: 0, vacations: [], hiringDate: '2020-01-01' },
-  { id: '31', name: 'LIC. ANDRADE SOSA DELSY XIOMARA', role: 'Licenciada', groupId: 'LIC_CAS', teamId: 1, vacations: [], hiringDate: '2020-01-01' },
-  { id: '32', name: 'LIC. NORABUENA JACOME GABRIELA', role: 'Licenciada', groupId: 'LIC_CAS', teamId: 2, vacations: [], hiringDate: '2020-01-01' },
-  
-  // TECNICOS NOMBRADOS
-  { id: '16', name: 'TEC. MACEDO ACUÑA RAYDA', role: 'Técnico', groupId: 'TEC_NOMBRADOS', teamId: 0, vacations: [], hiringDate: '2020-01-01' },
-  { id: '17', name: 'TEC. RASHTA SOLANO GERARDO', role: 'Técnico', groupId: 'TEC_NOMBRADOS', teamId: 1, vacations: [], hiringDate: '2020-01-01' },
-  { id: '18', name: 'TEC. CACHA TOLEDO ANTONIA', role: 'Técnico', groupId: 'TEC_NOMBRADOS', teamId: 2, vacations: [], hiringDate: '2020-01-01' },
-  
-  // TECNICOS CAS
-  { id: '19', name: 'TEC. LLAUCE RODRIGUEZ LILIANA', role: 'Técnico', groupId: 'TEC_CAS', teamId: 3, vacations: [], hiringDate: '2020-01-01' },
-  { id: '20', name: 'TEC. ROQUE MEDRANO BHANNI NEBAHI', role: 'Técnico', groupId: 'TEC_CAS', teamId: 4, vacations: [], hiringDate: '2020-01-01' },
-  { id: '21', name: 'TEC. CUEVA VALENZUELA ARTURO', role: 'Técnico', groupId: 'TEC_CAS', teamId: 0, vacations: [], hiringDate: '2020-01-01' },
-  { id: '22', name: 'TEC. VELASQUEZ JURUMY YESSICA', role: 'Técnico', groupId: 'TEC_CAS', teamId: 1, vacations: [], hiringDate: '2020-01-01' },
-  { id: '23', name: 'TEC. REMIGIO JULCA LIDIA KARINA', role: 'Técnico', groupId: 'TEC_CAS', teamId: 2, vacations: [], hiringDate: '2020-01-01' },
-
-  // SUPERVISORA
-  { id: '24', name: 'LIC. MANRIQUE ORDEANO MAGNOLIA', role: 'Supervisora', groupId: 'SUPERVISORA', teamId: 0, vacations: [], hiringDate: '2020-01-01' },
-];
+const INITIAL_NURSES: Nurse[] = [];
 
 export default function App() {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 4)); // Mayo 2026
