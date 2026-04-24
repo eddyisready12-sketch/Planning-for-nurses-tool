@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { 
   format, 
   addMonths, 
@@ -41,6 +41,7 @@ import { Nurse, NurseRoster, ShiftType } from './types';
 import { SHIFT_COLORS, SHIFT_LABELS, SHIFT_HOURS } from './constants';
 import { generateMonthlyRoster } from './lib/roster-logic';
 import { TRANSLATIONS, Language } from './lib/translations';
+import { loadFromSupabase, saveToSupabase } from './lib/supabase-rest';
 
 // Initial data based on the user's spreadsheet groupings
 const INITIAL_NURSES: Nurse[] = [
@@ -90,6 +91,9 @@ const INITIAL_NURSES: Nurse[] = [
 export default function App() {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 4)); // Mayo 2026
   const [nurses, setNurses] = useState<Nurse[]>(INITIAL_NURSES);
+  const [isHydrating, setIsHydrating] = useState(true);
+  const [syncStatus, setSyncStatus] = useState('Loading Supabase...');
+  const [isSyncing, setIsSyncing] = useState(false);
   const [view, setView] = useState<'roster' | 'staff'>('roster');
   const [showAddNurse, setShowAddNurse] = useState(false);
   const [lang, setLang] = useState<Language>('en');
@@ -111,6 +115,44 @@ export default function App() {
   const roster = useMemo(() => {
     return generateMonthlyRoster(nurses, currentDate.getFullYear(), currentDate.getMonth());
   }, [nurses, currentDate]);
+
+  const loadedMonthRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const monthKey = format(currentDate, 'yyyy-MM');
+    if (loadedMonthRef.current === monthKey) {
+      return;
+    }
+
+    let cancelled = false;
+    setIsHydrating(true);
+    setSyncStatus('Loading data from Supabase...');
+
+    void loadFromSupabase(currentDate, INITIAL_NURSES)
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        setNurses(result.nurses);
+        setSyncStatus(result.status);
+        loadedMonthRef.current = monthKey;
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        setSyncStatus(`Supabase load failed: ${error.message || error}`);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsHydrating(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentDate]);
 
   const filteredRoster = useMemo(() => {
     return roster.filter(item => {
@@ -174,6 +216,19 @@ export default function App() {
 
   const handlePrevMonth = () => setCurrentDate(prev => subMonths(prev, 1));
   const handleNextMonth = () => setCurrentDate(prev => addMonths(prev, 1));
+
+  const handleSyncSupabase = async () => {
+    try {
+      setIsSyncing(true);
+      setSyncStatus('Saving roster to Supabase...');
+      const result = await saveToSupabase(currentDate, nurses, roster);
+      setSyncStatus(`Saved ${result.staffCount} staff and ${result.assignmentCount} assignments for ${result.monthKey}.`);
+    } catch (error) {
+      setSyncStatus(`Supabase save failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const addNurse = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -384,6 +439,20 @@ export default function App() {
             </div>
             
             <button 
+              onClick={handleSyncSupabase}
+              disabled={isHydrating || isSyncing}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm",
+                isHydrating || isSyncing
+                  ? "bg-emerald-50 text-emerald-500 border border-emerald-100"
+                  : "bg-emerald-500 text-white hover:bg-emerald-600"
+              )}
+            >
+              <Check size={16} />
+              {isHydrating ? 'Loading...' : isSyncing ? 'Syncing...' : 'Connect'}
+            </button>
+
+            <button 
               onClick={handleExportExcel}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all shadow-sm text-green-700"
             >
@@ -399,6 +468,9 @@ export default function App() {
 
         {view === 'roster' ? (
           <div className="space-y-6">
+            <div className="px-4 py-3 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-700 text-sm font-medium">
+              {syncStatus}
+            </div>
             {/* Filters and Search */}
             <div className="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
               <div className="relative flex-1">
