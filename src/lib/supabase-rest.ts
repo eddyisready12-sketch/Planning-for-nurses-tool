@@ -2,8 +2,11 @@ import { format } from 'date-fns';
 import { Nurse, NurseRoster, ShiftType, StaffGroupId } from '../types';
 import { STAFF_GROUP_LABELS } from '../constants';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL =
+  import.meta.env.VITE_SUPABASE_URL || 'https://rigjfrwyhpmlexjasafz.supabase.co';
+const SUPABASE_ANON_KEY =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpZ2pmcnd5aHBtbGV4amFzYWZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjcwMjAsImV4cCI6MjA5MjY0MzAyMH0.VVCB5i__XrrtdweNwcMp_klAbiI-fCx8DLsCxqSUrFA';
 const PAGE_SLUG = import.meta.env.VITE_SUPABASE_PAGE_SLUG || 'main-roster';
 
 const GROUP_NAME_TO_ID = Object.entries(STAFF_GROUP_LABELS).reduce((acc, [key, value]) => {
