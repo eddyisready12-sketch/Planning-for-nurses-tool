@@ -1,4 +1,5 @@
 import { eachDayOfInterval, endOfYear, format, parseISO, startOfYear } from 'date-fns';
+import { createClient, type RealtimeChannel } from '@supabase/supabase-js';
 import { Nurse, NurseRoster, ShiftType, StaffGroupId } from '../types';
 import { SHIFT_HOURS, STAFF_GROUP_LABELS } from '../constants';
 import { getShiftForDate } from './roster-logic';
@@ -17,6 +18,10 @@ export type SupabaseConnectionSummary = {
   anonKey: string;
   pageSlug: string;
   configured: boolean;
+};
+
+type RealtimeSubscriptionHandle = {
+  unsubscribe: () => void;
 };
 
 function getStoredConfig(): StoredSupabaseConfig {
@@ -39,6 +44,30 @@ function getSupabaseConfig() {
     anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || stored.anonKey || '',
     pageSlug: import.meta.env.VITE_SUPABASE_PAGE_SLUG || stored.pageSlug || 'main-roster',
   };
+}
+
+let realtimeClient: ReturnType<typeof createClient> | null = null;
+let realtimeClientKey = '';
+
+function getRealtimeClient() {
+  const { url, anonKey } = getSupabaseConfig();
+  if (!url || !anonKey) {
+    return null;
+  }
+
+  const nextKey = `${url}|${anonKey}`;
+  if (!realtimeClient || realtimeClientKey !== nextKey) {
+    realtimeClient = createClient(url, anonKey, {
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
+      },
+    });
+    realtimeClientKey = nextKey;
+  }
+
+  return realtimeClient;
 }
 
 export function getSupabaseConnectionSummary(): SupabaseConnectionSummary {
@@ -69,6 +98,62 @@ export function clearSupabaseBrowserConfig() {
   }
 
   window.localStorage.removeItem('hospithro.supabase.config');
+}
+
+export function subscribeToSupabaseChanges(
+  currentDate: Date,
+  onChange: () => void
+): RealtimeSubscriptionHandle | null {
+  const client = getRealtimeClient();
+  if (!client) {
+    return null;
+  }
+
+  const { pageSlug } = getSupabaseConfig();
+  const monthKey = format(currentDate, 'yyyy-MM');
+
+  const channel = client.channel(`hospithro-live:${pageSlug}:${monthKey}:${Date.now()}`);
+  const notifyTables = ['staff_members', 'leave_entries', 'personnel_groups', 'monthly_plans', 'staff_vacation_balances'];
+
+  notifyTables.forEach((table) => {
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table,
+        filter: `page_slug=eq.${pageSlug}`,
+      },
+      () => onChange()
+    );
+  });
+
+  channel.on(
+    'postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: 'roster_assignments',
+      filter: `page_slug=eq.${pageSlug}`,
+    },
+    (payload) => {
+      const monthFromRecord =
+        (payload.new as { month_key?: string } | null)?.month_key ||
+        (payload.old as { month_key?: string } | null)?.month_key;
+
+      if (!monthFromRecord || monthFromRecord === monthKey) {
+        onChange();
+      }
+    }
+  );
+
+  channel.subscribe();
+
+  return {
+    unsubscribe: () => {
+      void client.removeChannel(channel);
+    },
+  };
 }
 
 const GROUP_NAME_TO_ID = Object.entries(STAFF_GROUP_LABELS).reduce((acc, [key, value]) => {

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { 
   format, 
   addMonths, 
@@ -50,6 +50,7 @@ import {
   loadFromSupabase,
   saveSupabaseBrowserConfig,
   saveToSupabase,
+  subscribeToSupabaseChanges,
 } from './lib/supabase-rest';
 
 // Initial data based on the user's spreadsheet groupings
@@ -99,6 +100,7 @@ export default function App() {
   }, [nurses, currentDate]);
 
   const loadedMonthRef = useRef<string | null>(null);
+  const realtimeRefreshTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const config = getSupabaseConnectionSummary();
@@ -110,33 +112,28 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
+  const loadCurrentMonthFromSupabase = useCallback(async (options?: { force?: boolean; reason?: string }) => {
     const monthKey = format(currentDate, 'yyyy-MM');
-    if (loadedMonthRef.current === monthKey) {
+    if (!options?.force && loadedMonthRef.current === monthKey) {
       return;
     }
 
-    let cancelled = false;
     setIsHydrating(true);
-    setSyncStatus('Loading data from Supabase...');
+    setSyncStatus(options?.reason || 'Loading data from Supabase...');
 
-    void loadFromSupabase(currentDate, INITIAL_NURSES)
-      .then((result) => {
-        if (cancelled) {
-          return;
-        }
-        setNurses(result.nurses);
-        setSyncStatus(result.status);
-        loadedMonthRef.current = monthKey;
-      })
+    const result = await loadFromSupabase(currentDate, INITIAL_NURSES);
+    setNurses(result.nurses);
+    setSyncStatus(result.status);
+    loadedMonthRef.current = monthKey;
+    setIsHydrating(false);
+  }, [currentDate]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadCurrentMonthFromSupabase()
       .catch((error) => {
-        if (cancelled) {
-          return;
-        }
-        setSyncStatus(`Supabase load failed: ${error.message || error}`);
-      })
-      .finally(() => {
         if (!cancelled) {
+          setSyncStatus(`Supabase load failed: ${error.message || error}`);
           setIsHydrating(false);
         }
       });
@@ -144,7 +141,38 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [currentDate]);
+  }, [loadCurrentMonthFromSupabase]);
+
+  useEffect(() => {
+    if (!getSupabaseConnectionSummary().configured) {
+      return;
+    }
+
+    const subscription = subscribeToSupabaseChanges(currentDate, () => {
+      if (realtimeRefreshTimerRef.current !== null) {
+        window.clearTimeout(realtimeRefreshTimerRef.current);
+      }
+
+      realtimeRefreshTimerRef.current = window.setTimeout(() => {
+        loadedMonthRef.current = null;
+        void loadCurrentMonthFromSupabase({
+          force: true,
+          reason: 'Realtime update received. Refreshing...'
+        }).catch((error) => {
+          setSyncStatus(`Supabase realtime refresh failed: ${error.message || error}`);
+          setIsHydrating(false);
+        });
+      }, 250);
+    });
+
+    return () => {
+      if (realtimeRefreshTimerRef.current !== null) {
+        window.clearTimeout(realtimeRefreshTimerRef.current);
+        realtimeRefreshTimerRef.current = null;
+      }
+      subscription?.unsubscribe();
+    };
+  }, [currentDate, loadCurrentMonthFromSupabase, supabaseUrl, supabaseAnonKey, supabasePageSlug]);
 
   const filteredRoster = useMemo(() => {
     return roster.filter(item => {
