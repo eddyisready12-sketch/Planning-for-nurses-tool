@@ -1037,7 +1037,14 @@ export default function App() {
         ) : (
           <div className="space-y-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-800">{t.directory} ({nurses.length})</h3>
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">{t.directory} ({nurses.length})</h3>
+                <div className="mt-1 flex items-center gap-2 text-sm text-gray-400">
+                  <span className="font-medium text-gray-500">{monthYearLabel}</span>
+                  <span className="text-gray-300">•</span>
+                  <span>Hospital Victor Ramos Guardia</span>
+                </div>
+              </div>
               <button 
                 onClick={() => setShowAddNurse(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all shadow-md"
