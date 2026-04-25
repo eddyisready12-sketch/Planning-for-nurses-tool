@@ -281,6 +281,12 @@ export default function App() {
     return dailyCounts;
   }, [daysInMonth, roster]);
 
+  const teamCounts = useMemo(() => {
+    return Array.from({ length: 5 }, (_, index) =>
+      nurses.filter((nurse) => nurse.teamId === index).length
+    );
+  }, [nurses]);
+
   const handlePrevMonth = () => setCurrentDate(prev => subMonths(prev, 1));
   const handleNextMonth = () => setCurrentDate(prev => addMonths(prev, 1));
 
@@ -407,6 +413,13 @@ export default function App() {
       return n;
     });
     await persistNurseChanges(nextNurses, 'Vacation period removed.');
+  };
+
+  const updateNurseTeam = async (nurseId: string, teamId: number) => {
+    const nextNurses = nurses.map((nurse) =>
+      nurse.id === nurseId ? { ...nurse, teamId } : nurse
+    );
+    await persistNurseChanges(nextNurses, 'Team updated.');
   };
 
   const handleExportExcel = () => {
@@ -1000,9 +1013,9 @@ export default function App() {
                       <div className="text-[10px] font-bold text-gray-400 mb-1">T{i+1}</div>
                       <div className={cn(
                         "w-full h-12 rounded-lg border flex items-center justify-center font-mono text-sm",
-                        i === 3 || i === 4 ? "bg-gray-50 border-gray-100 text-gray-400" : "bg-blue-50 border-blue-100 text-blue-600"
+                        teamCounts[i] === 0 ? "bg-gray-50 border-gray-100 text-gray-400" : "bg-blue-50 border-blue-100 text-blue-600"
                       )}>
-                        {i < 3 ? '5' : '4'}
+                        {teamCounts[i]}
                       </div>
                     </div>
                   ))}
@@ -1070,6 +1083,23 @@ export default function App() {
                                       {nurse.role}
                                     </span>
                                     <span className="text-[10px] text-gray-400 font-mono">Team {nurse.teamId + 1}</span>
+                                  </div>
+                                  <div className="mt-3">
+                                    <select
+                                      value={nurse.teamId}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        void updateNurseTeam(nurse.id, Number(e.target.value));
+                                      }}
+                                      className="px-3 py-2 rounded-xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-xs font-medium text-gray-600"
+                                    >
+                                      <option value={0}>Team 1</option>
+                                      <option value={1}>Team 2</option>
+                                      <option value={2}>Team 3</option>
+                                      <option value={3}>Team 4</option>
+                                      <option value={4}>Team 5</option>
+                                    </select>
                                   </div>
                                 </div>
                               </div>

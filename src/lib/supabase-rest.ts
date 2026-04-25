@@ -101,6 +101,7 @@ type StaffMemberRow = {
   full_name: string;
   group_name: string;
   sort_order: number;
+  team_id?: number | null;
 };
 
 type LeaveEntryRow = {
@@ -281,7 +282,7 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
 
   const [staffRows, leaveRows, assignmentRows, planRows] = await Promise.all([
     request<StaffMemberRow[]>(
-      `staff_members?select=full_name,group_name,sort_order&page_slug=eq.${encodeURIComponent(pageSlug)}&active=eq.true&order=sort_order.asc`
+      `staff_members?select=full_name,group_name,sort_order,team_id&page_slug=eq.${encodeURIComponent(pageSlug)}&active=eq.true&order=sort_order.asc`
     ),
     request<LeaveEntryRow[]>(
       `leave_entries?select=staff_name,leave_code,start_date,end_date&page_slug=eq.${encodeURIComponent(pageSlug)}&order=start_date.asc`
@@ -310,7 +311,7 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       name: row.full_name,
       role: inferRole(groupId, fallback?.role),
       groupId,
-      teamId: fallback?.teamId ?? (row.sort_order % 5),
+      teamId: row.team_id ?? fallback?.teamId ?? (row.sort_order % 5),
       vacations: [],
       hiringDate: fallback?.hiringDate || '2020-01-01',
       overrides: {},
@@ -404,6 +405,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
     group_name: STAFF_GROUP_LABELS[nurse.groupId],
     full_name: nurse.name,
     sort_order: index,
+    team_id: nurse.teamId,
     active: true,
   }));
   await insertChunked('staff_members', staffRows);
