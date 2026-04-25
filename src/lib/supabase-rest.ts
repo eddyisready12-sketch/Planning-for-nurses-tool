@@ -1,7 +1,10 @@
-import { format, parseISO } from 'date-fns';
+import { eachDayOfInterval, endOfYear, format, parseISO, startOfYear } from 'date-fns';
 import { Nurse, NurseRoster, ShiftType, StaffGroupId } from '../types';
 import { SHIFT_HOURS, STAFF_GROUP_LABELS } from '../constants';
 import { getShiftForDate } from './roster-logic';
+
+const ANNUAL_VACATION_DAYS = 25;
+const ANNUAL_VACATION_HOURS = ANNUAL_VACATION_DAYS * 12;
 
 type StoredSupabaseConfig = {
   url?: string;
@@ -197,6 +200,58 @@ function chunk<T>(items: T[], size: number) {
     output.push(items.slice(index, index + size));
   }
   return output;
+}
+
+function buildVacationBalanceRows(currentDate: Date, nurses: Nurse[], pageSlug: string) {
+  const yearStart = startOfYear(currentDate);
+  const yearEnd = endOfYear(currentDate);
+  const vacationYear = Number(format(currentDate, 'yyyy'));
+
+  return nurses.map((nurse) => {
+    const nurseWithoutVacation = {
+      ...nurse,
+      vacations: [],
+      overrides: Object.fromEntries(
+        Object.entries(nurse.overrides || {}).filter(([, shift]) => shift !== 'V')
+      ),
+    };
+
+    let usedDays = 0;
+    let usedHours = 0;
+
+    nurse.vacations.forEach((range) => {
+      const start = parseISO(range.start);
+      const end = parseISO(range.end);
+      const clippedStart = start < yearStart ? yearStart : start;
+      const clippedEnd = end > yearEnd ? yearEnd : end;
+
+      if (clippedStart > clippedEnd) {
+        return;
+      }
+
+      eachDayOfInterval({ start: clippedStart, end: clippedEnd }).forEach((date) => {
+        const scheduledShift = getShiftForDate(nurseWithoutVacation, date);
+        const scheduledHours = SHIFT_HOURS[scheduledShift];
+        if (scheduledHours > 0) {
+          usedDays += 1;
+        }
+        usedHours += scheduledHours;
+      });
+    });
+
+    return {
+      page_slug: pageSlug,
+      staff_name: nurse.name,
+      vacation_year: vacationYear,
+      allowance_days: ANNUAL_VACATION_DAYS,
+      allowance_hours: ANNUAL_VACATION_HOURS,
+      used_days: usedDays,
+      used_hours: usedHours,
+      remaining_days: Math.max(ANNUAL_VACATION_DAYS - usedDays, 0),
+      remaining_hours: Math.max(ANNUAL_VACATION_HOURS - usedHours, 0),
+      updated_at: new Date().toISOString(),
+    };
+  });
 }
 
 async function insertChunked(table: string, rows: unknown[]) {
@@ -417,6 +472,17 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
     })
   );
   await insertChunked('roster_assignments', assignmentRows);
+
+  const vacationBalanceRows = buildVacationBalanceRows(currentDate, nurses, pageSlug);
+  if (vacationBalanceRows.length) {
+    await request('staff_vacation_balances?on_conflict=page_slug,staff_name,vacation_year', {
+      method: 'POST',
+      headers: {
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify(vacationBalanceRows),
+    });
+  }
 
   return {
     monthKey,
