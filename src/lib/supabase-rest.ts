@@ -203,6 +203,13 @@ function chunk<T>(items: T[], size: number) {
   return output;
 }
 
+function appendVacationRange(nurse: Nurse, start: string, end: string) {
+  const exists = nurse.vacations.some((range) => range.start === start && range.end === end);
+  if (!exists) {
+    nurse.vacations.push({ start, end });
+  }
+}
+
 function buildVacationBalanceRows(currentDate: Date, nurses: Nurse[], pageSlug: string) {
   const yearStart = startOfYear(currentDate);
   const yearEnd = endOfYear(currentDate);
@@ -336,10 +343,7 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       return;
     }
 
-    nurse.vacations.push({
-      start: entry.start_date,
-      end: entry.end_date,
-    });
+    appendVacationRange(nurse, entry.start_date, entry.end_date);
   });
 
   assignmentRows.forEach((entry) => {
@@ -350,6 +354,7 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
     }
 
     if (mappedShift === 'V') {
+      appendVacationRange(nurse, entry.work_date, entry.work_date);
       return;
     }
 
@@ -410,24 +415,41 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
   }));
   await insertChunked('staff_members', staffRows);
 
-  const leaveRows = nurses.flatMap((nurse) => [
-    ...nurse.vacations.map((range) => ({
-      page_slug: pageSlug,
-      staff_name: nurse.name,
-      leave_code: 'VAC',
-      start_date: range.start,
-      end_date: range.end,
-    })),
-    ...Object.entries(nurse.overrides || {})
-      .filter(([, shift]) => shift === 'O')
-      .map(([date]) => ({
+  const leaveRowMap = new Map<string, {
+    page_slug: string;
+    staff_name: string;
+    leave_code: string;
+    start_date: string;
+    end_date: string;
+  }>();
+
+  nurses.forEach((nurse) => {
+    nurse.vacations.forEach((range) => {
+      const row = {
         page_slug: pageSlug,
         staff_name: nurse.name,
-        leave_code: 'O',
-        start_date: date,
-        end_date: date,
-      })),
-  ]);
+        leave_code: 'VAC',
+        start_date: range.start,
+        end_date: range.end,
+      };
+      leaveRowMap.set(`${row.staff_name}|${row.leave_code}|${row.start_date}|${row.end_date}`, row);
+    });
+
+    Object.entries(nurse.overrides || {}).forEach(([date, shift]) => {
+      if (shift === 'V' || shift === 'O') {
+        const row = {
+          page_slug: pageSlug,
+          staff_name: nurse.name,
+          leave_code: shift === 'V' ? 'VAC' : 'O',
+          start_date: date,
+          end_date: date,
+        };
+        leaveRowMap.set(`${row.staff_name}|${row.leave_code}|${row.start_date}|${row.end_date}`, row);
+      }
+    });
+  });
+
+  const leaveRows = Array.from(leaveRowMap.values());
 
   if (leaveRows.length) {
     await insertChunked('leave_entries', leaveRows);
