@@ -10,6 +10,8 @@ import {
   subMonths, 
   startOfMonth, 
   endOfMonth, 
+  startOfYear,
+  endOfYear,
   eachDayOfInterval, 
   parseISO 
 } from 'date-fns';
@@ -164,7 +166,7 @@ export default function App() {
       return null;
     }
 
-    const vacationDays = selectedRosterMember.days.filter((day) => day.shift === 'V').length;
+    const monthlyVacationDays = selectedRosterMember.days.filter((day) => day.shift === 'V').length;
     const nurseWithoutVacation = {
       ...selectedRosterMember.nurse,
       vacations: [],
@@ -173,7 +175,7 @@ export default function App() {
       ),
     };
 
-    const vacationHours = selectedRosterMember.days.reduce((sum, day) => {
+    const monthlyVacationHours = selectedRosterMember.days.reduce((sum, day) => {
       if (day.shift !== 'V') {
         return sum;
       }
@@ -181,7 +183,7 @@ export default function App() {
       const originalShift = getShiftForDate(nurseWithoutVacation, parseISO(day.date));
       return sum + SHIFT_HOURS[originalShift];
     }, 0);
-    const vacationWorkDays = selectedRosterMember.days.reduce((sum, day) => {
+    const monthlyVacationWorkDays = selectedRosterMember.days.reduce((sum, day) => {
       if (day.shift !== 'V') {
         return sum;
       }
@@ -190,14 +192,44 @@ export default function App() {
       return sum + (SHIFT_HOURS[originalShift] > 0 ? 1 : 0);
     }, 0);
 
+    const yearStart = startOfYear(currentDate);
+    const yearEnd = endOfYear(currentDate);
+    let yearlyVacationDays = 0;
+    let yearlyVacationHours = 0;
+    let yearlyVacationWorkDays = 0;
+
+    selectedRosterMember.nurse.vacations.forEach((range) => {
+      const start = parseISO(range.start);
+      const end = parseISO(range.end);
+      const clippedStart = start < yearStart ? yearStart : start;
+      const clippedEnd = end > yearEnd ? yearEnd : end;
+
+      if (clippedStart > clippedEnd) {
+        return;
+      }
+
+      eachDayOfInterval({ start: clippedStart, end: clippedEnd }).forEach((date) => {
+        yearlyVacationDays += 1;
+        const originalShift = getShiftForDate(nurseWithoutVacation, date);
+        const originalHours = SHIFT_HOURS[originalShift];
+        yearlyVacationHours += originalHours;
+        if (originalHours > 0) {
+          yearlyVacationWorkDays += 1;
+        }
+      });
+    });
+
     return {
-      vacationDays,
-      vacationWorkDays,
-      vacationHours,
-      vacationDaysLeft: Math.max(ANNUAL_VACATION_DAYS - vacationWorkDays, 0),
-      vacationHoursLeft: Math.max(ANNUAL_VACATION_HOURS - vacationHours, 0),
+      monthlyVacationDays,
+      monthlyVacationWorkDays,
+      monthlyVacationHours,
+      yearlyVacationDays,
+      yearlyVacationWorkDays,
+      yearlyVacationHours,
+      vacationDaysLeft: Math.max(ANNUAL_VACATION_DAYS - yearlyVacationWorkDays, 0),
+      vacationHoursLeft: Math.max(ANNUAL_VACATION_HOURS - yearlyVacationHours, 0),
     };
-  }, [selectedRosterMember]);
+  }, [currentDate, selectedRosterMember]);
 
   const stats = useMemo(() => {
     const dailyCounts = daysInMonth.map(day => {
@@ -1329,13 +1361,13 @@ export default function App() {
                   <div className="mt-2 text-2xl font-bold text-emerald-700">{selectedRosterMember.nurse.vacations.length}</div>
                 </div>
                 <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Vacation days / hours</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Vacation this month</div>
                   <div className="mt-2 text-2xl font-bold text-emerald-700">
-                    {selectedVacationSummary?.vacationDays ?? 0} / {selectedVacationSummary?.vacationHours ?? 0}h
+                    {selectedVacationSummary?.monthlyVacationDays ?? 0} / {selectedVacationSummary?.monthlyVacationHours ?? 0}h
                   </div>
                 </div>
                 <div className="p-4 rounded-2xl bg-teal-50 border border-teal-100">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">Vacation left</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">Vacation left this year</div>
                   <div className="mt-2 text-2xl font-bold text-teal-700">
                     {selectedVacationSummary?.vacationDaysLeft ?? ANNUAL_VACATION_DAYS} / {selectedVacationSummary?.vacationHoursLeft ?? ANNUAL_VACATION_HOURS}h
                   </div>
@@ -1376,13 +1408,13 @@ export default function App() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Used</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Used this year</div>
                         <div className="mt-1 text-xl font-bold text-emerald-700">
-                          {selectedVacationSummary?.vacationDays ?? 0} days / {selectedVacationSummary?.vacationHours ?? 0}h
+                          {selectedVacationSummary?.yearlyVacationWorkDays ?? 0} days / {selectedVacationSummary?.yearlyVacationHours ?? 0}h
                         </div>
                       </div>
                       <div className="p-3 rounded-2xl bg-teal-50 border border-teal-100">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">Remaining</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">Remaining this year</div>
                         <div className="mt-1 text-xl font-bold text-teal-700">
                           {selectedVacationSummary?.vacationDaysLeft ?? ANNUAL_VACATION_DAYS} days / {selectedVacationSummary?.vacationHoursLeft ?? ANNUAL_VACATION_HOURS}h
                         </div>
