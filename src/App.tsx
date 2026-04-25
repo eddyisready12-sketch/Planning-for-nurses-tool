@@ -1094,13 +1094,27 @@ export default function App() {
                   <span>Hospital Victor Ramos Guardia</span>
                 </div>
               </div>
-              <button 
-                onClick={() => setShowAddNurse(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all shadow-md"
-              >
-                <UserPlus size={16} />
-                {t.addStaff}
-              </button>
+              <div className="flex items-center gap-3">
+                <select
+                  value={selectedTeamFilter}
+                  onChange={(e) => setSelectedTeamFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                  className="px-4 py-2 rounded-lg bg-white border border-gray-200 text-sm font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                >
+                  <option value="all">All teams</option>
+                  <option value={0}>Team 1</option>
+                  <option value={1}>Team 2</option>
+                  <option value={2}>Team 3</option>
+                  <option value={3}>Team 4</option>
+                  <option value={4}>Team 5</option>
+                </select>
+                <button 
+                  onClick={() => setShowAddNurse(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all shadow-md"
+                >
+                  <UserPlus size={16} />
+                  {t.addStaff}
+                </button>
+              </div>
             </div>
 
              <div className="space-y-12">
