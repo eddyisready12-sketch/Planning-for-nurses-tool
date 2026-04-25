@@ -972,7 +972,8 @@ export default function App() {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
                             key={nurse.id}
-                            className="p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden"
+                            onClick={() => setSelectedNurseId(nurse.id)}
+                            className="p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden cursor-pointer"
                           >
                             <div className="flex justify-between items-start">
                               <div className="flex gap-4">
@@ -980,7 +981,7 @@ export default function App() {
                                   <Users size={24} />
                                 </div>
                                 <div>
-                                  <h4 className="font-bold text-gray-800 leading-tight">{nurse.name}</h4>
+                                  <h4 className="font-bold text-gray-800 leading-tight group-hover:underline underline-offset-4">{nurse.name}</h4>
                                   <div className="flex items-center gap-2 mt-1">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
                                       {nurse.role}
@@ -991,14 +992,20 @@ export default function App() {
                               </div>
                               <div className="flex items-center gap-1">
                                 <button 
-                                  onClick={() => setEditingVacationsId(nurse.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingVacationsId(nurse.id);
+                                  }}
                                   className="text-gray-300 hover:text-emerald-600 transition-colors p-1"
                                   title={t.manageVacations}
                                 >
                                   <Palmtree size={18} />
                                 </button>
                                 <button 
-                                  onClick={() => removeNurse(nurse.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void removeNurse(nurse.id);
+                                  }}
                                   className="text-gray-300 hover:text-red-500 transition-colors p-1"
                                 >
                                   <Trash2 size={18} />
