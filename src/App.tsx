@@ -1382,6 +1382,9 @@ export default function App() {
                   <p className="text-sm text-gray-500 mt-1">
                     Save the project URL and anon key in this browser without putting them into GitHub.
                   </p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    Viewing month: <span className="font-semibold text-gray-600">{monthYearLabel}</span>
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowSupabaseSettings(false)}
