@@ -1369,23 +1369,28 @@ export default function App() {
                   </div>
 
                   <h4 className="text-xs font-black uppercase tracking-[0.25em] text-gray-400 mt-8 mb-4">Vacation</h4>
-                  <div className="mb-4 grid grid-cols-2 gap-3">
-                    <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Vacation days</div>
-                      <div className="mt-1 text-xl font-bold text-emerald-700">{selectedVacationSummary?.vacationDays ?? 0}</div>
+                  <div className="mb-4 grid grid-cols-1 gap-3">
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Annual allowance</div>
+                      <div className="mt-1 text-xl font-bold text-slate-700">{ANNUAL_VACATION_DAYS} days / {ANNUAL_VACATION_HOURS}h</div>
                     </div>
-                    <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Vacation hours</div>
-                      <div className="mt-1 text-xl font-bold text-emerald-700">{selectedVacationSummary?.vacationHours ?? 0}h</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Used</div>
+                        <div className="mt-1 text-xl font-bold text-emerald-700">
+                          {selectedVacationSummary?.vacationDays ?? 0} days / {selectedVacationSummary?.vacationHours ?? 0}h
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-teal-50 border border-teal-100">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">Remaining</div>
+                        <div className="mt-1 text-xl font-bold text-teal-700">
+                          {selectedVacationSummary?.vacationDaysLeft ?? ANNUAL_VACATION_DAYS} days / {selectedVacationSummary?.vacationHoursLeft ?? ANNUAL_VACATION_HOURS}h
+                        </div>
+                      </div>
                     </div>
-                    <div className="p-3 rounded-2xl bg-teal-50 border border-teal-100">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">Days left</div>
-                      <div className="mt-1 text-xl font-bold text-teal-700">{selectedVacationSummary?.vacationDaysLeft ?? ANNUAL_VACATION_DAYS}</div>
-                    </div>
-                    <div className="p-3 rounded-2xl bg-teal-50 border border-teal-100">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">Hours left</div>
-                      <div className="mt-1 text-xl font-bold text-teal-700">{selectedVacationSummary?.vacationHoursLeft ?? ANNUAL_VACATION_HOURS}h</div>
-                    </div>
+                    <p className="text-[11px] text-gray-400 leading-relaxed">
+                      Vacation hours are based on the work shifts this person would otherwise have worked.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     {selectedRosterMember.nurse.vacations.length === 0 ? (
