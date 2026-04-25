@@ -10,6 +10,7 @@ import {
   subMonths, 
   startOfMonth, 
   endOfMonth, 
+  startOfDay,
   startOfYear,
   endOfYear,
   eachDayOfInterval, 
@@ -55,6 +56,7 @@ import {
 const INITIAL_NURSES: Nurse[] = [];
 const ANNUAL_VACATION_DAYS = 25;
 const ANNUAL_VACATION_HOURS = ANNUAL_VACATION_DAYS * 12;
+const ADMIN_MODE_STORAGE_KEY = 'hospithro.admin-mode';
 
 function formatVacationDays(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
@@ -83,6 +85,8 @@ export default function App() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [editingVacationsId, setEditingVacationsId] = useState<string | null>(null);
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const today = useMemo(() => startOfDay(new Date()), []);
 
   const monthYearLabel = format(currentDate, 'MMMM yyyy');
   const daysInMonth = eachDayOfInterval({
@@ -101,6 +105,9 @@ export default function App() {
     setSupabaseUrl(config.url);
     setSupabaseAnonKey(config.anonKey);
     setSupabasePageSlug(config.pageSlug);
+    if (typeof window !== 'undefined') {
+      setIsAdminMode(window.localStorage.getItem(ADMIN_MODE_STORAGE_KEY) === 'true');
+    }
   }, []);
 
   useEffect(() => {
@@ -364,6 +371,13 @@ export default function App() {
     setShowSupabaseSettings(false);
   };
 
+  const handleAdminModeChange = (nextValue: boolean) => {
+    setIsAdminMode(nextValue);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(ADMIN_MODE_STORAGE_KEY, String(nextValue));
+    }
+  };
+
   const persistNurseChanges = async (nextNurses: Nurse[], successMessage: string) => {
     setNurses(nextNurses);
 
@@ -489,6 +503,12 @@ export default function App() {
   };
 
   const setManualShift = (nurseId: string, date: string, shift: ShiftType | null) => {
+    if (!isAdminMode && startOfDay(parseISO(date)) < today) {
+      setSyncStatus('Past dates are locked. Enable admin mode to edit past days.');
+      setActiveEditCell(null);
+      return;
+    }
+
     setNurses(nurses.map(n => {
       if (n.id === nurseId) {
         const newOverrides = { ...(n.overrides || {}) };
@@ -502,6 +522,8 @@ export default function App() {
       return n;
     }));
   };
+
+  const isPastLockedDate = (date: string) => !isAdminMode && startOfDay(parseISO(date)) < today;
 
   return (
     <div className="min-h-screen bg-[#FDFDFB] text-[#1A1A1A] font-sans selection:bg-blue-100 italic-serif-headers">
@@ -829,10 +851,15 @@ export default function App() {
                             <td 
                               key={idx} 
                               className={cn(
-                                "p-1.5 border-r border-[#E5E5E1] transition-all cursor-pointer relative",
+                                "p-1.5 border-r border-[#E5E5E1] transition-all relative",
+                                isPastLockedDate(day.date) ? "cursor-not-allowed opacity-80" : "cursor-pointer",
                                 format(parseISO(day.date), 'EEEEEE') === 'Su' ? "bg-red-50/10" : ""
                               )}
                               onClick={(e) => {
+                                if (isPastLockedDate(day.date)) {
+                                  setSyncStatus('Past dates are locked. Enable admin mode to edit past days.');
+                                  return;
+                                }
                                 const rect = e.currentTarget.getBoundingClientRect();
                                 setActiveEditCell({
                                   nurseId: row.nurse.id,
@@ -1396,6 +1423,25 @@ export default function App() {
                   className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-sm"
                 />
               </div>
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-xs font-black uppercase tracking-widest text-amber-600">Admin mode</div>
+                    <p className="mt-1 text-sm text-amber-800">
+                      Allows editing past dates after they have passed.
+                    </p>
+                  </div>
+                  <label className="inline-flex items-center gap-2 text-sm font-semibold text-amber-800">
+                    <input
+                      type="checkbox"
+                      checked={isAdminMode}
+                      onChange={(e) => handleAdminModeChange(e.target.checked)}
+                      className="h-4 w-4 rounded border-amber-200 text-amber-600 focus:ring-amber-200"
+                    />
+                    Admin
+                  </label>
+                </div>
+              </div>
 
               <div className="flex gap-3 pt-2">
                 <button
@@ -1553,7 +1599,12 @@ export default function App() {
                       <button
                         key={day.date}
                         type="button"
+                        disabled={isPastLockedDate(day.date)}
                         onClick={(e) => {
+                          if (isPastLockedDate(day.date)) {
+                            setSyncStatus('Past dates are locked. Enable admin mode to edit past days.');
+                            return;
+                          }
                           const rect = e.currentTarget.getBoundingClientRect();
                           setActiveEditCell({
                             nurseId: selectedRosterMember.nurse.id,
@@ -1562,7 +1613,12 @@ export default function App() {
                             y: rect.bottom,
                           });
                         }}
-                        className="p-3 rounded-2xl border border-gray-100 bg-gray-50/50 text-left hover:border-blue-200 hover:bg-blue-50/30 transition-colors"
+                        className={cn(
+                          "p-3 rounded-2xl border border-gray-100 bg-gray-50/50 text-left transition-colors",
+                          isPastLockedDate(day.date)
+                            ? "cursor-not-allowed opacity-70"
+                            : "hover:border-blue-200 hover:bg-blue-50/30 cursor-pointer"
+                        )}
                       >
                         <div className="text-[10px] uppercase font-black tracking-widest text-gray-400">
                           {format(parseISO(day.date), 'EEE dd')}
