@@ -1065,7 +1065,7 @@ export default function App() {
               <div className="px-3 py-1.5 text-[9px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50 mb-1">
                 {t.setShift}
               </div>
-              {(['GD', 'GN', 'M', 'T', 'O', 'L'] as ShiftType[]).map(s => (
+              {(['GD', 'GN', 'M', 'T', 'O', 'L', 'V'] as ShiftType[]).map(s => (
                 <button
                   key={s}
                   onClick={() => {
@@ -1081,9 +1081,10 @@ export default function App() {
                     s === 'M' && "bg-teal-50 text-teal-700",
                     s === 'T' && "bg-orange-50 text-orange-700",
                     s === 'O' && "bg-amber-100 text-amber-700",
-                    s === 'L' && "bg-gray-100 text-gray-400"
+                    s === 'L' && "bg-gray-100 text-gray-400",
+                    s === 'V' && "bg-rose-100 text-rose-800"
                   )}>
-                    {s === 'GD' ? 'D' : (s === 'GN' ? 'N' : s)}
+                    {s === 'GD' ? 'D' : (s === 'GN' ? 'N' : (s === 'V' ? 'VAC' : s))}
                   </div>
                   <span className="text-xs font-medium text-gray-700">
                     {lang === 'es' ? SHIFT_LABELS[s].split('(')[0] : s}
@@ -1361,7 +1362,20 @@ export default function App() {
                   <h4 className="text-xs font-black uppercase tracking-[0.25em] text-gray-400 mb-4">Monthly overview</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {selectedRosterMember.days.map((day) => (
-                      <div key={day.date} className="p-3 rounded-2xl border border-gray-100 bg-gray-50/50">
+                      <button
+                        key={day.date}
+                        type="button"
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setActiveEditCell({
+                            nurseId: selectedRosterMember.nurse.id,
+                            date: day.date,
+                            x: rect.left,
+                            y: rect.bottom,
+                          });
+                        }}
+                        className="p-3 rounded-2xl border border-gray-100 bg-gray-50/50 text-left hover:border-blue-200 hover:bg-blue-50/30 transition-colors"
+                      >
                         <div className="text-[10px] uppercase font-black tracking-widest text-gray-400">
                           {format(parseISO(day.date), 'EEE dd')}
                         </div>
@@ -1377,7 +1391,7 @@ export default function App() {
                         )}>
                           {day.shift === 'V' ? 'VAC' : day.shift === 'GD' ? 'D' : day.shift === 'GN' ? 'N' : day.shift}
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </section>
