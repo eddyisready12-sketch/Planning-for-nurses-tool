@@ -257,7 +257,28 @@ export default function App() {
     setShowSupabaseSettings(false);
   };
 
-  const addNurse = (e: React.FormEvent<HTMLFormElement>) => {
+  const persistNurseChanges = async (nextNurses: Nurse[], successMessage: string) => {
+    setNurses(nextNurses);
+
+    if (!getSupabaseConnectionSummary().configured) {
+      setSyncStatus(`${successMessage} Locally updated only. Add Supabase settings and click Connect to save online.`);
+      return;
+    }
+
+    try {
+      setIsSyncing(true);
+      setSyncStatus('Saving roster to Supabase...');
+      const nextRoster = generateMonthlyRoster(nextNurses, currentDate.getFullYear(), currentDate.getMonth());
+      const result = await saveToSupabase(currentDate, nextNurses, nextRoster);
+      setSyncStatus(`${successMessage} Saved ${result.staffCount} staff and ${result.assignmentCount} assignments for ${result.monthKey}.`);
+    } catch (error) {
+      setSyncStatus(`Supabase save failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const addNurse = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const newNurse: Nurse = {
@@ -269,32 +290,40 @@ export default function App() {
       vacations: [],
       hiringDate: '2026-01-01'
     };
-    setNurses([...nurses, newNurse]);
+    const nextNurses = [...nurses, newNurse];
+    setSelectedNurseId(newNurse.id);
     setShowAddNurse(false);
+    await persistNurseChanges(nextNurses, 'Staff member added.');
   };
 
-  const removeNurse = (id: string) => {
-    setNurses(nurses.filter(n => n.id !== id));
+  const removeNurse = async (id: string) => {
+    const nextNurses = nurses.filter(n => n.id !== id);
+    if (selectedNurseId === id) {
+      setSelectedNurseId(null);
+    }
+    await persistNurseChanges(nextNurses, 'Staff member removed.');
   };
 
-  const addVacation = (nurseId: string, start: string, end: string) => {
-    setNurses(nurses.map(n => {
+  const addVacation = async (nurseId: string, start: string, end: string) => {
+    const nextNurses = nurses.map(n => {
       if (n.id === nurseId) {
         return { ...n, vacations: [...n.vacations, { start, end }] };
       }
       return n;
-    }));
+    });
+    await persistNurseChanges(nextNurses, 'Vacation period added.');
   };
 
-  const removeVacation = (nurseId: string, index: number) => {
-    setNurses(nurses.map(n => {
+  const removeVacation = async (nurseId: string, index: number) => {
+    const nextNurses = nurses.map(n => {
       if (n.id === nurseId) {
         const newVacations = [...n.vacations];
         newVacations.splice(index, 1);
         return { ...n, vacations: newVacations };
       }
       return n;
-    }));
+    });
+    await persistNurseChanges(nextNurses, 'Vacation period removed.');
   };
 
   const handleExportExcel = () => {
@@ -657,13 +686,23 @@ export default function App() {
                             className="sticky left-0 z-20 bg-white group-hover:bg-[#141414] p-4 border-r border-[#E5E5E1] font-mono text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis shadow-[4px_0_10px_rgba(0,0,0,0.03)] group-hover:shadow-none transition-colors cursor-pointer"
                           >
                             <div className="flex flex-col">
-                              <button
-                                type="button"
-                                onClick={() => setSelectedNurseId(row.nurse.id)}
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedNurseId(row.nurse.id);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setSelectedNurseId(row.nurse.id);
+                                  }
+                                }}
                                 className="text-left hover:underline underline-offset-4 cursor-pointer"
                               >
                                 {row.nurse.name}
-                              </button>
+                              </div>
                               <span className="text-[9px] opacity-40 uppercase font-bold group-hover:opacity-60">{t.roles[row.nurse.role as keyof typeof t.roles] || row.nurse.role}</span>
                             </div>
                           </td>
