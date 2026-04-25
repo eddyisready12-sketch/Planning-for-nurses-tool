@@ -56,6 +56,10 @@ const INITIAL_NURSES: Nurse[] = [];
 const ANNUAL_VACATION_DAYS = 25;
 const ANNUAL_VACATION_HOURS = ANNUAL_VACATION_DAYS * 12;
 
+function formatVacationDays(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
 export default function App() {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 4)); // Mayo 2026
   const [nurses, setNurses] = useState<Nurse[]>(INITIAL_NURSES);
@@ -189,6 +193,9 @@ export default function App() {
       }
 
       const originalShift = getShiftForDate(nurseWithoutVacation, parseISO(day.date));
+      if (originalShift === 'M' || originalShift === 'T') {
+        return sum + 0.5;
+      }
       return sum + (SHIFT_HOURS[originalShift] > 0 ? 1 : 0);
     }, 0);
 
@@ -213,7 +220,9 @@ export default function App() {
         const originalShift = getShiftForDate(nurseWithoutVacation, date);
         const originalHours = SHIFT_HOURS[originalShift];
         yearlyVacationHours += originalHours;
-        if (originalHours > 0) {
+        if (originalShift === 'M' || originalShift === 'T') {
+          yearlyVacationWorkDays += 0.5;
+        } else if (originalHours > 0) {
           yearlyVacationWorkDays += 1;
         }
       });
@@ -1362,14 +1371,14 @@ export default function App() {
                 </div>
                 <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
                   <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Vacation this month</div>
-                  <div className="mt-2 text-2xl font-bold text-emerald-700">
-                    {selectedVacationSummary?.monthlyVacationDays ?? 0} / {selectedVacationSummary?.monthlyVacationHours ?? 0}h
+                    <div className="mt-2 text-2xl font-bold text-emerald-700">
+                    {formatVacationDays(selectedVacationSummary?.monthlyVacationWorkDays ?? 0)} / {selectedVacationSummary?.monthlyVacationHours ?? 0}h
                   </div>
                 </div>
                 <div className="p-4 rounded-2xl bg-teal-50 border border-teal-100">
                   <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">Vacation left this year</div>
                   <div className="mt-2 text-2xl font-bold text-teal-700">
-                    {selectedVacationSummary?.vacationDaysLeft ?? ANNUAL_VACATION_DAYS} / {selectedVacationSummary?.vacationHoursLeft ?? ANNUAL_VACATION_HOURS}h
+                    {formatVacationDays(selectedVacationSummary?.vacationDaysLeft ?? ANNUAL_VACATION_DAYS)} / {selectedVacationSummary?.vacationHoursLeft ?? ANNUAL_VACATION_HOURS}h
                   </div>
                 </div>
                 <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100">
@@ -1403,20 +1412,20 @@ export default function App() {
                   <h4 className="text-xs font-black uppercase tracking-[0.25em] text-gray-400 mt-8 mb-4">Vacation</h4>
                   <div className="mb-4 grid grid-cols-1 gap-3">
                     <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Annual allowance</div>
-                      <div className="mt-1 text-xl font-bold text-slate-700">{ANNUAL_VACATION_DAYS} days / {ANNUAL_VACATION_HOURS}h</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Annual allowance</div>
+                      <div className="mt-1 text-xl font-bold text-slate-700">{formatVacationDays(ANNUAL_VACATION_DAYS)} days / {ANNUAL_VACATION_HOURS}h</div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
                         <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Used this year</div>
                         <div className="mt-1 text-xl font-bold text-emerald-700">
-                          {selectedVacationSummary?.yearlyVacationWorkDays ?? 0} days / {selectedVacationSummary?.yearlyVacationHours ?? 0}h
+                          {formatVacationDays(selectedVacationSummary?.yearlyVacationWorkDays ?? 0)} days / {selectedVacationSummary?.yearlyVacationHours ?? 0}h
                         </div>
                       </div>
                       <div className="p-3 rounded-2xl bg-teal-50 border border-teal-100">
                         <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">Remaining this year</div>
                         <div className="mt-1 text-xl font-bold text-teal-700">
-                          {selectedVacationSummary?.vacationDaysLeft ?? ANNUAL_VACATION_DAYS} days / {selectedVacationSummary?.vacationHoursLeft ?? ANNUAL_VACATION_HOURS}h
+                          {formatVacationDays(selectedVacationSummary?.vacationDaysLeft ?? ANNUAL_VACATION_DAYS)} days / {selectedVacationSummary?.vacationHoursLeft ?? ANNUAL_VACATION_HOURS}h
                         </div>
                       </div>
                     </div>

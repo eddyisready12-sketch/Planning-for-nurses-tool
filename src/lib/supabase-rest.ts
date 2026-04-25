@@ -232,7 +232,9 @@ function buildVacationBalanceRows(currentDate: Date, nurses: Nurse[], pageSlug: 
       eachDayOfInterval({ start: clippedStart, end: clippedEnd }).forEach((date) => {
         const scheduledShift = getShiftForDate(nurseWithoutVacation, date);
         const scheduledHours = SHIFT_HOURS[scheduledShift];
-        if (scheduledHours > 0) {
+        if (scheduledShift === 'M' || scheduledShift === 'T') {
+          usedDays += 0.5;
+        } else if (scheduledHours > 0) {
           usedDays += 1;
         }
         usedHours += scheduledHours;
