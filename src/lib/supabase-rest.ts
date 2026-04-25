@@ -443,6 +443,29 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       return;
     }
 
+    const entryDate = parseISO(entry.work_date);
+    const inVacation = nurse.vacations.some((range) => {
+      const start = parseISO(range.start);
+      const end = parseISO(range.end);
+      return entryDate >= start && entryDate <= end;
+    });
+
+    if (inVacation) {
+      return;
+    }
+
+    const baselineShift = getShiftForDate(
+      {
+        ...nurse,
+        overrides: {},
+      },
+      entryDate
+    );
+
+    if (mappedShift === baselineShift) {
+      return;
+    }
+
     nurse.overrides = nurse.overrides || {};
     nurse.overrides[entry.work_date] = mappedShift;
   });
