@@ -51,6 +51,8 @@ import {
 
 // Initial data based on the user's spreadsheet groupings
 const INITIAL_NURSES: Nurse[] = [];
+const ANNUAL_VACATION_DAYS = 25;
+const ANNUAL_VACATION_HOURS = ANNUAL_VACATION_DAYS * 12;
 
 export default function App() {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 4)); // Mayo 2026
@@ -179,10 +181,21 @@ export default function App() {
       const originalShift = getShiftForDate(nurseWithoutVacation, parseISO(day.date));
       return sum + SHIFT_HOURS[originalShift];
     }, 0);
+    const vacationWorkDays = selectedRosterMember.days.reduce((sum, day) => {
+      if (day.shift !== 'V') {
+        return sum;
+      }
+
+      const originalShift = getShiftForDate(nurseWithoutVacation, parseISO(day.date));
+      return sum + (SHIFT_HOURS[originalShift] > 0 ? 1 : 0);
+    }, 0);
 
     return {
       vacationDays,
+      vacationWorkDays,
       vacationHours,
+      vacationDaysLeft: Math.max(ANNUAL_VACATION_DAYS - vacationWorkDays, 0),
+      vacationHoursLeft: Math.max(ANNUAL_VACATION_HOURS - vacationHours, 0),
     };
   }, [selectedRosterMember]);
 
@@ -1300,7 +1313,7 @@ export default function App() {
             </div>
 
             <div className="p-8 overflow-y-auto max-h-[calc(90vh-120px)] space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
                   <div className="text-[10px] font-black uppercase tracking-widest text-blue-500">Total hours</div>
                   <div className="mt-2 text-2xl font-bold text-blue-700">{selectedRosterMember.totalHours}h</div>
@@ -1319,6 +1332,12 @@ export default function App() {
                   <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Vacation days / hours</div>
                   <div className="mt-2 text-2xl font-bold text-emerald-700">
                     {selectedVacationSummary?.vacationDays ?? 0} / {selectedVacationSummary?.vacationHours ?? 0}h
+                  </div>
+                </div>
+                <div className="p-4 rounded-2xl bg-teal-50 border border-teal-100">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">Vacation left</div>
+                  <div className="mt-2 text-2xl font-bold text-teal-700">
+                    {selectedVacationSummary?.vacationDaysLeft ?? ANNUAL_VACATION_DAYS} / {selectedVacationSummary?.vacationHoursLeft ?? ANNUAL_VACATION_HOURS}h
                   </div>
                 </div>
                 <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100">
@@ -1358,6 +1377,14 @@ export default function App() {
                     <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
                       <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Vacation hours</div>
                       <div className="mt-1 text-xl font-bold text-emerald-700">{selectedVacationSummary?.vacationHours ?? 0}h</div>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-teal-50 border border-teal-100">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">Days left</div>
+                      <div className="mt-1 text-xl font-bold text-teal-700">{selectedVacationSummary?.vacationDaysLeft ?? ANNUAL_VACATION_DAYS}</div>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-teal-50 border border-teal-100">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-teal-500">Hours left</div>
+                      <div className="mt-1 text-xl font-bold text-teal-700">{selectedVacationSummary?.vacationHoursLeft ?? ANNUAL_VACATION_HOURS}h</div>
                     </div>
                   </div>
                   <div className="space-y-2">
