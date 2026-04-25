@@ -8,6 +8,13 @@ type StoredSupabaseConfig = {
   pageSlug?: string;
 };
 
+export type SupabaseConnectionSummary = {
+  url: string;
+  anonKey: string;
+  pageSlug: string;
+  configured: boolean;
+};
+
 function getStoredConfig(): StoredSupabaseConfig {
   if (typeof window === 'undefined') {
     return {};
@@ -28,6 +35,36 @@ function getSupabaseConfig() {
     anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || stored.anonKey || '',
     pageSlug: import.meta.env.VITE_SUPABASE_PAGE_SLUG || stored.pageSlug || 'main-roster',
   };
+}
+
+export function getSupabaseConnectionSummary(): SupabaseConnectionSummary {
+  const config = getSupabaseConfig();
+  return {
+    ...config,
+    configured: Boolean(config.url && config.anonKey),
+  };
+}
+
+export function saveSupabaseBrowserConfig(config: StoredSupabaseConfig) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const nextConfig: StoredSupabaseConfig = {
+    url: config.url?.trim(),
+    anonKey: config.anonKey?.trim(),
+    pageSlug: config.pageSlug?.trim() || 'main-roster',
+  };
+
+  window.localStorage.setItem('hospithro.supabase.config', JSON.stringify(nextConfig));
+}
+
+export function clearSupabaseBrowserConfig() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.removeItem('hospithro.supabase.config');
 }
 
 const GROUP_NAME_TO_ID = Object.entries(STAFF_GROUP_LABELS).reduce((acc, [key, value]) => {

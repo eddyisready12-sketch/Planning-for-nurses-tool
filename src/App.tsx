@@ -41,7 +41,13 @@ import { Nurse, NurseRoster, ShiftType } from './types';
 import { SHIFT_COLORS, SHIFT_LABELS, SHIFT_HOURS } from './constants';
 import { generateMonthlyRoster } from './lib/roster-logic';
 import { TRANSLATIONS, Language } from './lib/translations';
-import { loadFromSupabase, saveToSupabase } from './lib/supabase-rest';
+import {
+  clearSupabaseBrowserConfig,
+  getSupabaseConnectionSummary,
+  loadFromSupabase,
+  saveSupabaseBrowserConfig,
+  saveToSupabase,
+} from './lib/supabase-rest';
 
 // Initial data based on the user's spreadsheet groupings
 const INITIAL_NURSES: Nurse[] = [];
@@ -56,8 +62,13 @@ export default function App() {
   const [showAddNurse, setShowAddNurse] = useState(false);
   const [lang, setLang] = useState<Language>('en');
   const [showInfo, setShowInfo] = useState(false);
+  const [showSupabaseSettings, setShowSupabaseSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEditCell, setActiveEditCell] = useState<{ nurseId: string, date: string, x: number, y: number } | null>(null);
+  const [selectedNurseId, setSelectedNurseId] = useState<string | null>(null);
+  const [supabaseUrl, setSupabaseUrl] = useState('');
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState('');
+  const [supabasePageSlug, setSupabasePageSlug] = useState('main-roster');
 
   const t = TRANSLATIONS[lang];
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -75,6 +86,13 @@ export default function App() {
   }, [nurses, currentDate]);
 
   const loadedMonthRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const config = getSupabaseConnectionSummary();
+    setSupabaseUrl(config.url);
+    setSupabaseAnonKey(config.anonKey);
+    setSupabasePageSlug(config.pageSlug);
+  }, []);
 
   useEffect(() => {
     const monthKey = format(currentDate, 'yyyy-MM');
@@ -131,6 +149,14 @@ export default function App() {
     return groups;
   }, [filteredRoster]);
 
+  const selectedRosterMember = useMemo(() => {
+    if (!selectedNurseId) {
+      return null;
+    }
+
+    return roster.find((item) => item.nurse.id === selectedNurseId) || null;
+  }, [roster, selectedNurseId]);
+
   const stats = useMemo(() => {
     const dailyCounts = daysInMonth.map(day => {
       const dateStr = format(day, 'yyyy-MM-dd');
@@ -177,6 +203,12 @@ export default function App() {
 
   const handleSyncSupabase = async () => {
     try {
+      if (!getSupabaseConnectionSummary().configured) {
+        setSyncStatus('Supabase is not configured yet. Open settings and add your connection.');
+        setShowSupabaseSettings(true);
+        return;
+      }
+
       setIsSyncing(true);
       setSyncStatus('Saving roster to Supabase...');
       const result = await saveToSupabase(currentDate, nurses, roster);
@@ -186,6 +218,43 @@ export default function App() {
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const handleSaveSupabaseSettings = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    saveSupabaseBrowserConfig({
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
+      pageSlug: supabasePageSlug,
+    });
+    loadedMonthRef.current = null;
+    setShowSupabaseSettings(false);
+    setSyncStatus('Supabase settings saved. Reloading remote data...');
+    setIsHydrating(true);
+
+    void loadFromSupabase(currentDate, INITIAL_NURSES)
+      .then((result) => {
+        setNurses(result.nurses);
+        setSyncStatus(result.status);
+        loadedMonthRef.current = format(currentDate, 'yyyy-MM');
+      })
+      .catch((error) => {
+        setSyncStatus(`Supabase load failed: ${error.message || error}`);
+      })
+      .finally(() => {
+        setIsHydrating(false);
+      });
+  };
+
+  const handleClearSupabaseSettings = () => {
+    clearSupabaseBrowserConfig();
+    setSupabaseUrl('');
+    setSupabaseAnonKey('');
+    setSupabasePageSlug('main-roster');
+    loadedMonthRef.current = null;
+    setNurses(INITIAL_NURSES);
+    setSyncStatus('Supabase connection cleared from this browser.');
+    setShowSupabaseSettings(false);
   };
 
   const addNurse = (e: React.FormEvent<HTMLFormElement>) => {
@@ -357,6 +426,13 @@ export default function App() {
                 title={t.aboutApp}
               >
                 <Info size={18} />
+              </button>
+              <button 
+                onClick={() => setShowSupabaseSettings(true)}
+                className="w-8 h-8 rounded-md flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors"
+                title="Supabase settings"
+              >
+                <Settings2 size={18} />
               </button>
               <div className="w-px h-6 bg-blue-200/50 my-auto mx-1" />
               <button 
@@ -578,7 +654,13 @@ export default function App() {
                         >
                           <td className="sticky left-0 z-20 bg-white group-hover:bg-[#141414] p-4 border-r border-[#E5E5E1] font-mono text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis shadow-[4px_0_10px_rgba(0,0,0,0.03)] group-hover:shadow-none transition-colors">
                             <div className="flex flex-col">
-                              <span>{row.nurse.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedNurseId(row.nurse.id)}
+                                className="text-left hover:underline underline-offset-4"
+                              >
+                                {row.nurse.name}
+                              </button>
                               <span className="text-[9px] opacity-40 uppercase font-bold group-hover:opacity-60">{t.roles[row.nurse.role as keyof typeof t.roles] || row.nurse.role}</span>
                             </div>
                           </td>
@@ -1022,6 +1104,206 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {showSupabaseSettings && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden"
+          >
+            <div className="p-8 border-b border-gray-100 bg-gray-50/50">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-2xl font-bold tracking-tight">Supabase connection</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Save the project URL and anon key in this browser without putting them into GitHub.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowSupabaseSettings(false)}
+                  className="p-2 hover:bg-white rounded-full transition-colors text-gray-400"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveSupabaseSettings} className="p-8 space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Project URL</label>
+                <input
+                  required
+                  value={supabaseUrl}
+                  onChange={(e) => setSupabaseUrl(e.target.value)}
+                  placeholder="https://your-project.supabase.co"
+                  className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Anon key</label>
+                <textarea
+                  required
+                  value={supabaseAnonKey}
+                  onChange={(e) => setSupabaseAnonKey(e.target.value)}
+                  placeholder="Paste the public anon key here"
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-sm font-mono resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Page slug</label>
+                <input
+                  value={supabasePageSlug}
+                  onChange={(e) => setSupabasePageSlug(e.target.value)}
+                  placeholder="main-roster"
+                  className="w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-sm"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleClearSupabaseSettings}
+                  className="px-5 py-3 rounded-2xl text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                >
+                  Clear browser config
+                </button>
+                <div className="flex-1" />
+                <button
+                  type="button"
+                  onClick={() => setShowSupabaseSettings(false)}
+                  className="px-5 py-3 rounded-2xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-3 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+                >
+                  Save connection
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {selectedRosterMember && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-[32px] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden"
+          >
+            <div className="p-8 border-b border-gray-100 bg-gray-50/50">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-2xl font-bold tracking-tight">{selectedRosterMember.nurse.name}</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {t.roles[selectedRosterMember.nurse.role as keyof typeof t.roles] || selectedRosterMember.nurse.role}
+                    {' · '}
+                    {t.groupLabels[selectedRosterMember.nurse.groupId as keyof typeof t.groupLabels] || selectedRosterMember.nurse.groupId}
+                    {' · '}
+                    Team {selectedRosterMember.nurse.teamId + 1}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedNurseId(null)}
+                  className="p-2 hover:bg-white rounded-full transition-colors text-gray-400"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-8 overflow-y-auto max-h-[calc(90vh-120px)] space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-blue-500">Total hours</div>
+                  <div className="mt-2 text-2xl font-bold text-blue-700">{selectedRosterMember.totalHours}h</div>
+                </div>
+                <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Day / Night</div>
+                  <div className="mt-2 text-2xl font-bold text-indigo-700">
+                    {selectedRosterMember.days.filter((d) => d.shift === 'GD').length} / {selectedRosterMember.days.filter((d) => d.shift === 'GN').length}
+                  </div>
+                </div>
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Vacation periods</div>
+                  <div className="mt-2 text-2xl font-bold text-emerald-700">{selectedRosterMember.nurse.vacations.length}</div>
+                </div>
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-amber-500">Manual overrides</div>
+                  <div className="mt-2 text-2xl font-bold text-amber-700">{Object.keys(selectedRosterMember.nurse.overrides || {}).length}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1.6fr] gap-6">
+                <section className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm">
+                  <h4 className="text-xs font-black uppercase tracking-[0.25em] text-gray-400 mb-4">Profile</h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-gray-400">Role</span>
+                      <span className="font-semibold text-gray-800">{t.roles[selectedRosterMember.nurse.role as keyof typeof t.roles] || selectedRosterMember.nurse.role}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-gray-400">Group</span>
+                      <span className="font-semibold text-gray-800">{t.groupLabels[selectedRosterMember.nurse.groupId as keyof typeof t.groupLabels] || selectedRosterMember.nurse.groupId}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-gray-400">Team</span>
+                      <span className="font-semibold text-gray-800">Team {selectedRosterMember.nurse.teamId + 1}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-gray-400">Joined</span>
+                      <span className="font-semibold text-gray-800">{format(parseISO(selectedRosterMember.nurse.hiringDate), 'dd MMM yyyy')}</span>
+                    </div>
+                  </div>
+
+                  <h4 className="text-xs font-black uppercase tracking-[0.25em] text-gray-400 mt-8 mb-4">Vacation</h4>
+                  <div className="space-y-2">
+                    {selectedRosterMember.nurse.vacations.length === 0 ? (
+                      <div className="text-sm text-gray-400">No vacation periods</div>
+                    ) : (
+                      selectedRosterMember.nurse.vacations.map((vac, index) => (
+                        <div key={`${vac.start}-${vac.end}-${index}`} className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100 text-sm text-emerald-800 font-medium">
+                          {format(parseISO(vac.start), 'dd MMM yyyy')} - {format(parseISO(vac.end), 'dd MMM yyyy')}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+
+                <section className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm">
+                  <h4 className="text-xs font-black uppercase tracking-[0.25em] text-gray-400 mb-4">Monthly overview</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {selectedRosterMember.days.map((day) => (
+                      <div key={day.date} className="p-3 rounded-2xl border border-gray-100 bg-gray-50/50">
+                        <div className="text-[10px] uppercase font-black tracking-widest text-gray-400">
+                          {format(parseISO(day.date), 'EEE dd')}
+                        </div>
+                        <div className={cn(
+                          "mt-2 inline-flex min-w-[44px] justify-center rounded-xl px-3 py-2 text-xs font-black",
+                          day.shift === 'GD' && "bg-blue-100 text-blue-700",
+                          day.shift === 'GN' && "bg-indigo-900 text-white",
+                          day.shift === 'M' && "bg-teal-50 text-teal-700",
+                          day.shift === 'T' && "bg-orange-50 text-orange-700",
+                          day.shift === 'O' && "bg-amber-100 text-amber-700",
+                          day.shift === 'V' && "bg-rose-100 text-rose-800",
+                          day.shift === 'L' && "bg-gray-100 text-gray-500"
+                        )}>
+                          {day.shift === 'V' ? 'VAC' : day.shift === 'GD' ? 'D' : day.shift === 'GN' ? 'N' : day.shift}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </div>
           </motion.div>
         </div>
       )}
