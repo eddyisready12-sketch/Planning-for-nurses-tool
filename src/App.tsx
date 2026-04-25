@@ -276,6 +276,33 @@ export default function App() {
     };
   }, [currentDate, selectedRosterMember]);
 
+  const selectedBalanceSummary = useMemo(() => {
+    if (!selectedRosterMember) {
+      return null;
+    }
+
+    const nurseWithoutVacation = {
+      ...selectedRosterMember.nurse,
+      vacations: [],
+      overrides: Object.fromEntries(
+        Object.entries(selectedRosterMember.nurse.overrides || {}).filter(([, shift]) => shift !== 'V')
+      ),
+    };
+
+    return selectedRosterMember.days.reduce(
+      (summary, day) => {
+        const scheduledShift = getShiftForDate(nurseWithoutVacation, parseISO(day.date));
+        const plannedHours = SHIFT_HOURS[scheduledShift];
+        const creditedHours = day.shift === 'V' ? plannedHours : SHIFT_HOURS[day.shift];
+
+        summary.plannedHours += plannedHours;
+        summary.creditedHours += creditedHours;
+        return summary;
+      },
+      { plannedHours: 0, creditedHours: 0 }
+    );
+  }, [selectedRosterMember]);
+
   const stats = useMemo(() => {
     const dailyCounts = daysInMonth.map(day => {
       const dateStr = format(day, 'yyyy-MM-dd');
@@ -1531,15 +1558,45 @@ export default function App() {
             </div>
 
             <div className="p-8 overflow-y-auto max-h-[calc(90vh-120px)] space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
                 <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-blue-500">Total hours</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-blue-500">Worked hours</div>
                   <div className="mt-2 text-2xl font-bold text-blue-700">{selectedRosterMember.totalHours}h</div>
+                </div>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Planned / Credited</div>
+                  <div className="mt-2 text-2xl font-bold text-slate-700">
+                    {selectedBalanceSummary?.plannedHours ?? 0} / {selectedBalanceSummary?.creditedHours ?? 0}h
+                  </div>
                 </div>
                 <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
                   <div className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Day / Night</div>
                   <div className="mt-2 text-2xl font-bold text-indigo-700">
                     {selectedRosterMember.days.filter((d) => d.shift === 'GD').length} / {selectedRosterMember.days.filter((d) => d.shift === 'GN').length}
+                  </div>
+                </div>
+                <div className={cn(
+                  "p-4 rounded-2xl border",
+                  (selectedBalanceSummary ? selectedBalanceSummary.creditedHours - selectedBalanceSummary.plannedHours : 0) >= 0
+                    ? "bg-emerald-50 border-emerald-100"
+                    : "bg-rose-50 border-rose-100"
+                )}>
+                  <div className={cn(
+                    "text-[10px] font-black uppercase tracking-widest",
+                    (selectedBalanceSummary ? selectedBalanceSummary.creditedHours - selectedBalanceSummary.plannedHours : 0) >= 0
+                      ? "text-emerald-500"
+                      : "text-rose-500"
+                  )}>
+                    Balance +/-
+                  </div>
+                  <div className={cn(
+                    "mt-2 text-2xl font-bold",
+                    (selectedBalanceSummary ? selectedBalanceSummary.creditedHours - selectedBalanceSummary.plannedHours : 0) >= 0
+                      ? "text-emerald-700"
+                      : "text-rose-700"
+                  )}>
+                    {(selectedBalanceSummary ? selectedBalanceSummary.creditedHours - selectedBalanceSummary.plannedHours : 0) > 0 ? '+' : ''}
+                    {(selectedBalanceSummary ? selectedBalanceSummary.creditedHours - selectedBalanceSummary.plannedHours : 0)}h
                   </div>
                 </div>
                 <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">

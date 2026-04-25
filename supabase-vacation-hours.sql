@@ -6,21 +6,36 @@ alter table public.roster_assignments
 
 create or replace view public.staff_monthly_summary as
 select
-  page_slug,
-  month_key,
-  staff_name,
-  group_name,
-  count(*) filter (where shift_code in ('D', 'N', 'M', 'T')) as worked_shifts,
-  count(*) filter (where shift_code = 'VAC') as vacation_days,
-  count(*) filter (where shift_code = 'VAC' and credited_hours > 0) as vacation_work_days,
-  count(*) filter (where shift_code = 'LIC') as license_days,
-  count(*) filter (where shift_code = 'O') as special_days,
-  count(*) filter (where shift_code = 'L') as off_days,
-  count(*) filter (where shift_code in ('D', 'N', 'M', 'T')) * coalesce(mp.shift_hours, 12) as worked_hours,
-  coalesce(sum(credited_hours) filter (where shift_code = 'VAC'), 0) as vacation_hours,
-  count(*) filter (where shift_code = 'LIC') * coalesce(mp.shift_hours, 12) as license_hours,
-  count(*) filter (where shift_code = 'O') * coalesce(mp.shift_hours, 12) as special_hours,
-  count(*) filter (where shift_code = 'L') * coalesce(mp.shift_hours, 12) as off_hours
+  ra.page_slug,
+  ra.month_key,
+  ra.staff_name,
+  ra.group_name,
+  count(*) filter (where ra.shift_code in ('D', 'N', 'M', 'T')) as worked_shifts,
+  count(*) filter (where ra.shift_code = 'VAC') as vacation_days,
+  count(*) filter (where ra.shift_code = 'VAC' and ra.credited_hours > 0) as vacation_work_days,
+  count(*) filter (where ra.shift_code = 'LIC') as license_days,
+  count(*) filter (where ra.shift_code = 'O') as special_days,
+  count(*) filter (where ra.shift_code = 'L') as off_days,
+  coalesce(sum(case when ra.shift_code in ('D', 'N', 'M', 'T') then ra.credited_hours else 0 end), 0) as worked_hours,
+  coalesce(sum(case when ra.shift_code = 'VAC' then ra.credited_hours else 0 end), 0) as vacation_hours,
+  coalesce(sum(case when ra.shift_code = 'LIC' then ra.credited_hours else 0 end), 0) as license_hours,
+  coalesce(sum(case when ra.shift_code = 'O' then ra.credited_hours else 0 end), 0) as special_hours,
+  coalesce(sum(case when ra.shift_code = 'L' then ra.credited_hours else 0 end), 0) as off_hours,
+  coalesce(sum(case
+    when ra.scheduled_shift_code = 'D' then 12
+    when ra.scheduled_shift_code = 'N' then 12
+    when ra.scheduled_shift_code = 'M' then 6
+    when ra.scheduled_shift_code = 'T' then 6
+    else 0
+  end), 0) as planned_hours,
+  coalesce(sum(ra.credited_hours), 0) as credited_hours_total,
+  coalesce(sum(ra.credited_hours), 0) - coalesce(sum(case
+    when ra.scheduled_shift_code = 'D' then 12
+    when ra.scheduled_shift_code = 'N' then 12
+    when ra.scheduled_shift_code = 'M' then 6
+    when ra.scheduled_shift_code = 'T' then 6
+    else 0
+  end), 0) as balance_hours
 from public.roster_assignments ra
 left join public.monthly_plans mp
   on mp.page_slug = ra.page_slug
