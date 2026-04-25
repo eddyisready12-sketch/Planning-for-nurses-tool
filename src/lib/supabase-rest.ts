@@ -1,6 +1,7 @@
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Nurse, NurseRoster, ShiftType, StaffGroupId } from '../types';
-import { STAFF_GROUP_LABELS } from '../constants';
+import { SHIFT_HOURS, STAFF_GROUP_LABELS } from '../constants';
+import { getShiftForDate } from './roster-logic';
 
 type StoredSupabaseConfig = {
   url?: string;
@@ -393,14 +394,27 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
   });
 
   const assignmentRows = roster.flatMap((item) =>
-    item.days.map((day) => ({
-      page_slug: pageSlug,
-      month_key: monthKey,
-      staff_name: item.nurse.name,
-      group_name: STAFF_GROUP_LABELS[item.nurse.groupId],
-      work_date: day.date,
-      shift_code: UI_TO_DB_SHIFT[day.shift],
-    }))
+    item.days.map((day) => {
+      const nurseWithoutVacation = {
+        ...item.nurse,
+        vacations: [],
+        overrides: Object.fromEntries(
+          Object.entries(item.nurse.overrides || {}).filter(([, shift]) => shift !== 'V')
+        ),
+      };
+      const scheduledShift = getShiftForDate(nurseWithoutVacation, parseISO(day.date));
+
+      return {
+        page_slug: pageSlug,
+        month_key: monthKey,
+        staff_name: item.nurse.name,
+        group_name: STAFF_GROUP_LABELS[item.nurse.groupId],
+        work_date: day.date,
+        shift_code: UI_TO_DB_SHIFT[day.shift],
+        scheduled_shift_code: UI_TO_DB_SHIFT[scheduledShift],
+        credited_hours: day.shift === 'V' ? SHIFT_HOURS[scheduledShift] : SHIFT_HOURS[day.shift],
+      };
+    })
   );
   await insertChunked('roster_assignments', assignmentRows);
 

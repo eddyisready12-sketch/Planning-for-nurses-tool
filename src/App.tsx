@@ -39,7 +39,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import { Nurse, NurseRoster, ShiftType } from './types';
 import { SHIFT_COLORS, SHIFT_LABELS, SHIFT_HOURS } from './constants';
-import { generateMonthlyRoster } from './lib/roster-logic';
+import { generateMonthlyRoster, getShiftForDate } from './lib/roster-logic';
 import { TRANSLATIONS, Language } from './lib/translations';
 import {
   clearSupabaseBrowserConfig,
@@ -163,7 +163,22 @@ export default function App() {
     }
 
     const vacationDays = selectedRosterMember.days.filter((day) => day.shift === 'V').length;
-    const vacationHours = vacationDays * 12;
+    const nurseWithoutVacation = {
+      ...selectedRosterMember.nurse,
+      vacations: [],
+      overrides: Object.fromEntries(
+        Object.entries(selectedRosterMember.nurse.overrides || {}).filter(([, shift]) => shift !== 'V')
+      ),
+    };
+
+    const vacationHours = selectedRosterMember.days.reduce((sum, day) => {
+      if (day.shift !== 'V') {
+        return sum;
+      }
+
+      const originalShift = getShiftForDate(nurseWithoutVacation, parseISO(day.date));
+      return sum + SHIFT_HOURS[originalShift];
+    }, 0);
 
     return {
       vacationDays,
