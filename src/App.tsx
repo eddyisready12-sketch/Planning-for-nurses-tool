@@ -652,12 +652,15 @@ export default function App() {
                           key={row.nurse.id} 
                           className="group hover:bg-[#141414] hover:text-white transition-colors duration-150 cursor-default"
                         >
-                          <td className="sticky left-0 z-20 bg-white group-hover:bg-[#141414] p-4 border-r border-[#E5E5E1] font-mono text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis shadow-[4px_0_10px_rgba(0,0,0,0.03)] group-hover:shadow-none transition-colors">
+                          <td
+                            onClick={() => setSelectedNurseId(row.nurse.id)}
+                            className="sticky left-0 z-20 bg-white group-hover:bg-[#141414] p-4 border-r border-[#E5E5E1] font-mono text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis shadow-[4px_0_10px_rgba(0,0,0,0.03)] group-hover:shadow-none transition-colors cursor-pointer"
+                          >
                             <div className="flex flex-col">
                               <button
                                 type="button"
                                 onClick={() => setSelectedNurseId(row.nurse.id)}
-                                className="text-left hover:underline underline-offset-4"
+                                className="text-left hover:underline underline-offset-4 cursor-pointer"
                               >
                                 {row.nurse.name}
                               </button>
@@ -683,7 +686,7 @@ export default function App() {
                             >
                               <div className={cn(
                                 "w-full h-8 flex items-center justify-center rounded-md font-mono text-[10px] font-bold transition-all duration-300",
-                                row.nurse.overrides?.[day.date] && "ring-2 ring-blue-400 ring-offset-1",
+                                row.nurse.overrides?.[day.date] && day.shift !== 'L' && "ring-2 ring-blue-400 ring-offset-1",
                                 day.shift === 'GD' && "bg-blue-100 text-blue-700 shadow-sm ring-1 ring-blue-200",
                                 day.shift === 'GN' && "bg-indigo-900 text-white shadow-xl ring-1 ring-indigo-950",
                                 day.shift === 'M' && "bg-teal-50 text-teal-700 shadow-sm ring-1 ring-teal-100",
