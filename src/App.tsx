@@ -157,6 +157,20 @@ export default function App() {
     return roster.find((item) => item.nurse.id === selectedNurseId) || null;
   }, [roster, selectedNurseId]);
 
+  const selectedVacationSummary = useMemo(() => {
+    if (!selectedRosterMember) {
+      return null;
+    }
+
+    const vacationDays = selectedRosterMember.days.filter((day) => day.shift === 'V').length;
+    const vacationHours = vacationDays * 12;
+
+    return {
+      vacationDays,
+      vacationHours,
+    };
+  }, [selectedRosterMember]);
+
   const stats = useMemo(() => {
     const dailyCounts = daysInMonth.map(day => {
       const dateStr = format(day, 'yyyy-MM-dd');
@@ -1270,7 +1284,7 @@ export default function App() {
             </div>
 
             <div className="p-8 overflow-y-auto max-h-[calc(90vh-120px)] space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
                   <div className="text-[10px] font-black uppercase tracking-widest text-blue-500">Total hours</div>
                   <div className="mt-2 text-2xl font-bold text-blue-700">{selectedRosterMember.totalHours}h</div>
@@ -1284,6 +1298,12 @@ export default function App() {
                 <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
                   <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Vacation periods</div>
                   <div className="mt-2 text-2xl font-bold text-emerald-700">{selectedRosterMember.nurse.vacations.length}</div>
+                </div>
+                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Vacation days / hours</div>
+                  <div className="mt-2 text-2xl font-bold text-emerald-700">
+                    {selectedVacationSummary?.vacationDays ?? 0} / {selectedVacationSummary?.vacationHours ?? 0}h
+                  </div>
                 </div>
                 <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100">
                   <div className="text-[10px] font-black uppercase tracking-widest text-amber-500">Manual overrides</div>
@@ -1314,6 +1334,16 @@ export default function App() {
                   </div>
 
                   <h4 className="text-xs font-black uppercase tracking-[0.25em] text-gray-400 mt-8 mb-4">Vacation</h4>
+                  <div className="mb-4 grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Vacation days</div>
+                      <div className="mt-1 text-xl font-bold text-emerald-700">{selectedVacationSummary?.vacationDays ?? 0}</div>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Vacation hours</div>
+                      <div className="mt-1 text-xl font-bold text-emerald-700">{selectedVacationSummary?.vacationHours ?? 0}h</div>
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     {selectedRosterMember.nurse.vacations.length === 0 ? (
                       <div className="text-sm text-gray-400">No vacation periods</div>
