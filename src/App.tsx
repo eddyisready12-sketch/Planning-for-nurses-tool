@@ -74,6 +74,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEditCell, setActiveEditCell] = useState<{ nurseId: string, date: string, x: number, y: number } | null>(null);
   const [selectedNurseId, setSelectedNurseId] = useState<string | null>(null);
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<number | 'all'>('all');
   const [supabaseUrl, setSupabaseUrl] = useState('');
   const [supabaseAnonKey, setSupabaseAnonKey] = useState('');
   const [supabasePageSlug, setSupabasePageSlug] = useState('main-roster');
@@ -281,11 +282,28 @@ export default function App() {
     return dailyCounts;
   }, [daysInMonth, roster]);
 
-  const teamCounts = useMemo(() => {
-    return Array.from({ length: 5 }, (_, index) =>
-      nurses.filter((nurse) => nurse.teamId === index).length
-    );
+  const teamSummaries = useMemo(() => {
+    return Array.from({ length: 5 }, (_, index) => {
+      const teamMembers = nurses.filter((nurse) => nurse.teamId === index);
+      const tecCount = teamMembers.filter((nurse) => nurse.role === 'Técnico').length;
+      const nurseCount = teamMembers.length - tecCount;
+
+      return {
+        teamId: index,
+        total: teamMembers.length,
+        nurseCount,
+        tecCount,
+      };
+    });
   }, [nurses]);
+
+  const filteredStaffDirectory = useMemo(() => {
+    return nurses.filter((nurse) => {
+      const matchSearch = nurse.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchTeam = selectedTeamFilter === 'all' || nurse.teamId === selectedTeamFilter;
+      return matchSearch && matchTeam;
+    });
+  }, [nurses, searchQuery, selectedTeamFilter]);
 
   const handlePrevMonth = () => setCurrentDate(prev => subMonths(prev, 1));
   const handleNextMonth = () => setCurrentDate(prev => addMonths(prev, 1));
@@ -420,6 +438,11 @@ export default function App() {
       nurse.id === nurseId ? { ...nurse, teamId } : nurse
     );
     await persistNurseChanges(nextNurses, 'Team updated.');
+  };
+
+  const handleTeamCardClick = (teamId: number) => {
+    setSelectedTeamFilter(teamId);
+    setView('staff');
   };
 
   const handleExportExcel = () => {
@@ -1008,16 +1031,30 @@ export default function App() {
                   <h3 className="font-semibold text-gray-700">{t.teamBalance}</h3>
                 </div>
                 <div className="grid grid-cols-5 gap-2">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex flex-col items-center">
-                      <div className="text-[10px] font-bold text-gray-400 mb-1">T{i+1}</div>
+                  {teamSummaries.map((team) => (
+                    <button
+                      key={team.teamId}
+                      type="button"
+                      onClick={() => handleTeamCardClick(team.teamId)}
+                      className="flex flex-col items-center text-left"
+                    >
+                      <div className="text-[10px] font-bold text-gray-400 mb-1">T{team.teamId + 1}</div>
                       <div className={cn(
-                        "w-full h-12 rounded-lg border flex items-center justify-center font-mono text-sm",
-                        teamCounts[i] === 0 ? "bg-gray-50 border-gray-100 text-gray-400" : "bg-blue-50 border-blue-100 text-blue-600"
+                        "w-full rounded-lg border px-3 py-2 transition-all hover:-translate-y-0.5 hover:shadow-sm",
+                        team.total === 0
+                          ? "bg-gray-50 border-gray-100 text-gray-400"
+                          : "bg-blue-50 border-blue-100 text-blue-600 hover:border-blue-200"
                       )}>
-                        {teamCounts[i]}
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-lg font-semibold">{team.total}</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest">Open</span>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between text-[10px] font-semibold">
+                          <span className="text-slate-500">Nurse {team.nurseCount}</span>
+                          <span className="text-indigo-500">Tec {team.tecCount}</span>
+                        </div>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
                 <p className="text-[11px] text-gray-400 mt-4">{t.totalStaff}: {nurses.length} {t.activeNurses}.</p>
@@ -1038,7 +1075,19 @@ export default function App() {
           <div className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-gray-800">{t.directory} ({nurses.length})</h3>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-bold text-gray-800">{t.directory} ({filteredStaffDirectory.length})</h3>
+                  {selectedTeamFilter !== 'all' && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTeamFilter('all')}
+                      className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+                    >
+                      Team {selectedTeamFilter + 1}
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
                 <div className="mt-1 flex items-center gap-2 text-sm text-gray-400">
                   <span className="font-medium text-gray-500">{monthYearLabel}</span>
                   <span className="text-gray-300">•</span>
@@ -1056,7 +1105,7 @@ export default function App() {
 
              <div className="space-y-12">
               {Object.entries(t.groupLabels).map(([groupId, label]) => {
-                const groupStaff = nurses.filter(n => n.groupId === groupId);
+                const groupStaff = filteredStaffDirectory.filter(n => n.groupId === groupId);
                 if (groupStaff.length === 0) return null;
 
                 return (
