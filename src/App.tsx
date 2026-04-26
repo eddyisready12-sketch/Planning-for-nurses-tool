@@ -1266,7 +1266,7 @@ export default function App() {
                         </td>
                       </tr>
                       <tr className="bg-[#FCFCFB] border-b border-[#E5E5E1]">
-                        <td className="sticky left-0 z-20 bg-[#FCFCFB] p-2 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
+                        <td className="sticky left-0 z-20 w-64 min-w-[240px] bg-[#FCFCFB] p-2 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
                           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
                             Dates
                           </div>
@@ -1304,7 +1304,7 @@ export default function App() {
                           <td
                             onClick={() => setSelectedNurseId(row.nurse.id)}
                             data-no-drag-scroll="true"
-                            className="sticky left-0 z-20 bg-white group-hover:bg-[#141414] p-4 border-r border-[#E5E5E1] font-mono text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis shadow-[4px_0_10px_rgba(0,0,0,0.03)] group-hover:shadow-none transition-colors cursor-pointer"
+                            className="sticky left-0 z-20 w-64 min-w-[240px] bg-white group-hover:bg-[#141414] p-4 border-r border-[#E5E5E1] font-mono text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis shadow-[4px_0_10px_rgba(0,0,0,0.03)] group-hover:shadow-none transition-colors cursor-pointer"
                           >
                             <div className="flex flex-col">
                               <div
@@ -1396,7 +1396,7 @@ export default function App() {
                 <tfoot className="border-t-2 border-[#141414] sticky bottom-0 z-30 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
                   {/* Row 1: TOTAL */}
                   <tr className="bg-gray-100 font-mono text-[10px] border-b border-gray-200">
-                    <td className="sticky left-0 z-40 bg-gray-100 p-3 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                    <td className="sticky left-0 z-40 w-64 min-w-[240px] bg-gray-100 p-3 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                       <div className="flex items-center justify-between font-black text-gray-700 uppercase tracking-widest text-[11px] whitespace-nowrap gap-4">
                         <span>{t.staffingShift} (ALL)</span>
                         <div className="flex flex-col text-[10px] text-gray-500 font-mono leading-none border-l border-gray-300 pl-2 font-bold gap-1">
@@ -1418,7 +1418,7 @@ export default function App() {
 
                   {/* Row 2: LIC */}
                   <tr className="bg-white font-mono text-[10px] border-b border-gray-100">
-                    <td className="sticky left-0 z-40 bg-white p-3 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                    <td className="sticky left-0 z-40 w-64 min-w-[240px] bg-white p-3 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                       <div className="flex items-center justify-between text-blue-600 font-bold uppercase tracking-widest text-[11px] whitespace-nowrap gap-4">
                         <div className="flex items-center gap-2">
                           <div className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
@@ -1455,7 +1455,7 @@ export default function App() {
 
                   {/* Row 3: TEC */}
                   <tr className="bg-white font-mono text-[10px] border-b border-gray-100">
-                    <td className="sticky left-0 z-40 bg-white p-3 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                    <td className="sticky left-0 z-40 w-64 min-w-[240px] bg-white p-3 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                        <div className="flex items-center justify-between text-blue-400 font-bold uppercase tracking-widest text-[11px] whitespace-nowrap gap-4">
                          <div className="flex items-center gap-2">
                            <div className="w-1.5 h-1.5 rounded-full bg-blue-300 shrink-0" />
@@ -1484,7 +1484,7 @@ export default function App() {
 
                   {/* Row 4: Auxiliary (M/T) - Only if they exist in the month */}
                   <tr className="bg-gray-50 font-mono text-[9px]">
-                    <td className="sticky left-0 z-40 bg-gray-50 p-3 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                    <td className="sticky left-0 z-40 w-64 min-w-[240px] bg-gray-50 p-3 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                       <div className="flex items-center justify-between text-gray-400 font-bold uppercase tracking-widest text-[11px] whitespace-nowrap gap-4">
                         <span>REFUERZO (M/T)</span>
                         <div className="flex flex-col text-[10px] text-gray-500 font-mono leading-none border-l border-gray-300 pl-2 font-bold gap-1.5">
