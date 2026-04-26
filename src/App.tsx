@@ -123,10 +123,20 @@ export default function App() {
   const today = useMemo(() => startOfDay(new Date()), []);
 
   const monthYearLabel = format(currentDate, 'MMMM yyyy');
+  const monthStart = useMemo(() => startOfMonth(currentDate), [currentDate]);
+  const monthEnd = useMemo(() => endOfMonth(currentDate), [currentDate]);
   const daysInMonth = eachDayOfInterval({
-    start: startOfMonth(currentDate),
-    end: endOfMonth(currentDate)
+    start: monthStart,
+    end: monthEnd
   });
+
+  const hasVacationInCurrentMonth = useCallback((nurse: Nurse) => {
+    return nurse.vacations.some((range) => {
+      const vacationStart = parseISO(range.start);
+      const vacationEnd = parseISO(range.end);
+      return vacationStart <= monthEnd && vacationEnd >= monthStart;
+    });
+  }, [monthEnd, monthStart]);
 
   const activeNurses = useMemo(
     () => nurses.filter((nurse) => !nurse.archived),
@@ -1341,7 +1351,7 @@ export default function App() {
                             <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between text-xs text-gray-400">
                               <span>{t.joined}: {format(parseISO(nurse.hiringDate), 'MMM yyyy')}</span>
                               <div className="flex -space-x-2">
-                                {nurse.vacations.length > 0 && (
+                                {hasVacationInCurrentMonth(nurse) && (
                                   <div className="w-6 h-6 rounded-full bg-emerald-100 border-2 border-white flex items-center justify-center text-[8px] font-black text-emerald-700">VAC</div>
                                 )}
                               </div>
