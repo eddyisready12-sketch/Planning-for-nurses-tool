@@ -230,6 +230,32 @@ function removeDateFromVacationRanges(ranges: Nurse['vacations'], targetDate: st
   });
 }
 
+function buildMonthlyRosterForDisplay(nurses: Nurse[], year: number, month: number): NurseRoster[] {
+  const startDate = startOfMonth(new Date(year, month));
+  const endDate = endOfMonth(startDate);
+  const days = eachDayOfInterval({ start: startDate, end: endDate });
+
+  return nurses.map((nurse) => {
+    const nurseDays = days.map((date) => {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const loadedShift = nurse.loadedMonthAssignments?.[dateStr];
+
+      return {
+        date: dateStr,
+        shift: loadedShift ?? getShiftForDate(nurse, date),
+      };
+    });
+
+    const totalHours = nurseDays.reduce((sum, day) => sum + SHIFT_HOURS[day.shift], 0);
+
+    return {
+      nurse,
+      days: nurseDays,
+      totalHours,
+    };
+  });
+}
+
 export default function App() {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 4)); // Mayo 2026
   const [nurses, setNurses] = useState<Nurse[]>(INITIAL_NURSES);
@@ -293,7 +319,7 @@ export default function App() {
   );
 
   const roster = useMemo(() => {
-    return generateMonthlyRoster(activeNurses, currentDate.getFullYear(), currentDate.getMonth());
+    return buildMonthlyRosterForDisplay(activeNurses, currentDate.getFullYear(), currentDate.getMonth());
   }, [activeNurses, currentDate]);
 
   const loadedMonthRef = useRef<string | null>(null);
