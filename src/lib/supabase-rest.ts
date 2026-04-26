@@ -489,12 +489,14 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       return;
     }
 
-    if (entry.leave_code === 'O' || entry.leave_code === 'LIC') {
+    const normalizedLeaveCode = String(entry.leave_code || '').trim().toUpperCase();
+
+    if (normalizedLeaveCode === 'O' || normalizedLeaveCode === 'LIC') {
       const start = new Date(`${entry.start_date}T00:00:00`);
       const end = new Date(`${entry.end_date}T00:00:00`);
       for (let date = start; date <= end; date = new Date(date.getTime() + 86400000)) {
         nurse.overrides = nurse.overrides || {};
-        nurse.overrides[format(date, 'yyyy-MM-dd')] = entry.leave_code === 'LIC' ? 'LIC' : 'O';
+        nurse.overrides[format(date, 'yyyy-MM-dd')] = normalizedLeaveCode === 'LIC' ? 'LIC' : 'O';
       }
       return;
     }
@@ -504,7 +506,8 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
 
   assignmentRows.forEach((entry) => {
     const nurse = nurseByName.get(normalizeName(entry.staff_name));
-    const mappedShift = DB_TO_UI_SHIFT[entry.shift_code];
+    const normalizedShiftCode = String(entry.shift_code || '').trim().toUpperCase();
+    const mappedShift = DB_TO_UI_SHIFT[normalizedShiftCode];
     if (!nurse || !mappedShift) {
       return;
     }
