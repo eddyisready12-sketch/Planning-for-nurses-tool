@@ -1231,16 +1231,17 @@ export default function App() {
             </div>
 
             {/* Roster Grid Container */}
-            <div
-              ref={rosterScrollRef}
-              onPointerDown={handleRosterPointerDown}
-              onPointerMove={handleRosterPointerMove}
-              onPointerUp={handleRosterPointerUp}
-              onPointerCancel={handleRosterPointerUp}
-              onPointerLeave={handleRosterPointerUp}
-              className="bg-white border border-[#E5E5E1] rounded-2xl shadow-sm overflow-hidden overflow-x-auto relative cursor-grab active:cursor-grabbing"
-            >
-              <table className="w-full border-collapse table-fixed min-w-[2000px]">
+            <div className="bg-white border border-[#E5E5E1] rounded-2xl shadow-sm relative overflow-visible">
+              <div
+                ref={rosterScrollRef}
+                onPointerDown={handleRosterPointerDown}
+                onPointerMove={handleRosterPointerMove}
+                onPointerUp={handleRosterPointerUp}
+                onPointerCancel={handleRosterPointerUp}
+                onPointerLeave={handleRosterPointerUp}
+                className="overflow-x-auto overflow-y-visible relative cursor-grab active:cursor-grabbing rounded-2xl"
+              >
+                <table className="w-full border-collapse table-fixed min-w-[2000px]">
                 <thead
                   data-no-drag-scroll="true"
                   className="bg-[#F9F9F8] border-b-2 border-[#141414] sticky top-0 z-30 shadow-sm"
@@ -1505,7 +1506,8 @@ export default function App() {
                     <td colSpan={8}></td>
                   </tr>
                 </tfoot>
-              </table>
+                </table>
+              </div>
             </div>
 
             {/* Metrics Grid */}
