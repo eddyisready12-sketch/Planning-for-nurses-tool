@@ -19,6 +19,10 @@ export function getShiftForDate(nurse: Nurse, date: Date): ShiftType {
     }
   }
 
+  if (nurse.birthDate && format(parseISO(nurse.birthDate), 'MM-dd') === format(date, 'MM-dd')) {
+    return 'O';
+  }
+
   // Calculate day in rotation
   // We use the hiring date as a reference Point 0 for the cycle
   // Every nurse starts their Team rotation pattern offset by their teamId

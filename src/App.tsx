@@ -570,6 +570,7 @@ export default function App() {
       groupId: formData.get('groupId') as any,
       teamId: parseInt(formData.get('teamId') as string),
       archived: false,
+      birthDate: (formData.get('birthDate') as string) || undefined,
       vacations: [],
       hiringDate: '2026-01-01'
     };
@@ -1582,6 +1583,14 @@ export default function App() {
                   </select>
                 </div>
               </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">{t.birthday}</label>
+                <input
+                  type="date"
+                  name="birthDate"
+                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all text-sm"
+                />
+              </div>
               <div className="pt-4 flex gap-3">
                 <button 
                   type="button" 
@@ -1817,6 +1826,14 @@ export default function App() {
                       <span className="text-gray-400">Joined</span>
                       <span className="font-semibold text-gray-800">{format(parseISO(selectedRosterMember.nurse.hiringDate), 'dd MMM yyyy')}</span>
                     </div>
+                    {selectedRosterMember.nurse.birthDate && (
+                      <div className="flex justify-between gap-4">
+                        <span className="text-gray-400">{t.birthday}</span>
+                        <span className="font-semibold text-gray-800">
+                          {format(parseISO(selectedRosterMember.nurse.birthDate), 'dd MMM')}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <h4 className="text-xs font-black uppercase tracking-[0.25em] text-gray-400 mt-8 mb-4">Vacation</h4>
