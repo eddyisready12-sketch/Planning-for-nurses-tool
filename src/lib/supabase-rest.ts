@@ -500,7 +500,22 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       entryDate
     );
 
+    const legacyBaselineShift = getShiftForDate(
+      {
+        ...nurse,
+        birthDate: undefined,
+        overrides: {},
+      },
+      entryDate
+    );
+
     if (mappedShift === baselineShift) {
+      return;
+    }
+
+    // If this saved assignment only differs because birthdays were introduced later,
+    // keep the birthday-generated O instead of treating the old saved shift as a manual override.
+    if (baselineShift === 'O' && mappedShift === legacyBaselineShift) {
       return;
     }
 
