@@ -134,9 +134,15 @@ export function subscribeToSupabaseChanges(
       event: '*',
       schema: 'public',
       table: 'roster_assignments',
-      filter: `page_slug=eq.${pageSlug}`,
     },
     (payload) => {
+      const record = (payload.new as { roster_type?: string; page_slug?: string; month_key?: string } | null)
+        || (payload.old as { roster_type?: string; page_slug?: string; month_key?: string } | null);
+      const recordRosterType = record?.roster_type || record?.page_slug;
+      if (recordRosterType && recordRosterType !== pageSlug) {
+        return;
+      }
+
       const monthFromRecord =
         (payload.new as { month_key?: string } | null)?.month_key ||
         (payload.old as { month_key?: string } | null)?.month_key;
@@ -260,6 +266,24 @@ function normalizeName(value: string) {
     .replace(/\blic\.\s*/g, '')
     .replace(/\btec\.\s*/g, '')
     .replace(/\s+/g, ' ');
+}
+
+function normalizeDbDateToLocalDate(value: string) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) {
+    return trimmed.slice(0, 10);
+  }
+
+  return format(parsed, 'yyyy-MM-dd');
 }
 
 function inferRole(groupId: StaffGroupId, fallback?: Nurse['role']): Nurse['role'] {
@@ -490,10 +514,12 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
     }
 
     const normalizedLeaveCode = String(entry.leave_code || '').trim().toUpperCase();
+    const localStartDate = normalizeDbDateToLocalDate(entry.start_date);
+    const localEndDate = normalizeDbDateToLocalDate(entry.end_date);
 
     if (normalizedLeaveCode === 'O' || normalizedLeaveCode === 'LIC') {
-      const start = new Date(`${entry.start_date}T00:00:00`);
-      const end = new Date(`${entry.end_date}T00:00:00`);
+      const start = new Date(`${localStartDate}T00:00:00`);
+      const end = new Date(`${localEndDate}T00:00:00`);
       for (let date = start; date <= end; date = new Date(date.getTime() + 86400000)) {
         nurse.overrides = nurse.overrides || {};
         nurse.overrides[format(date, 'yyyy-MM-dd')] = normalizedLeaveCode === 'LIC' ? 'LIC' : 'O';
@@ -501,28 +527,29 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       return;
     }
 
-    appendVacationRange(nurse, entry.start_date, entry.end_date);
+    appendVacationRange(nurse, localStartDate, localEndDate);
   });
 
   assignmentRows.forEach((entry) => {
     const nurse = nurseByName.get(normalizeName(entry.staff_name));
     const normalizedShiftCode = String(entry.shift_code || '').trim().toUpperCase();
     const mappedShift = DB_TO_UI_SHIFT[normalizedShiftCode];
+    const localWorkDate = normalizeDbDateToLocalDate(entry.work_date);
     if (!nurse || !mappedShift) {
       return;
     }
 
     if (mappedShift === 'V') {
-      appendVacationRange(nurse, entry.work_date, entry.work_date);
+      appendVacationRange(nurse, localWorkDate, localWorkDate);
     }
 
     if (mappedShift !== 'V') {
       nurse.overrides = nurse.overrides || {};
-      nurse.overrides[entry.work_date] = mappedShift;
+      nurse.overrides[localWorkDate] = mappedShift;
     }
 
     nurse.loadedMonthAssignments = nurse.loadedMonthAssignments || {};
-    nurse.loadedMonthAssignments[entry.work_date] = mappedShift;
+    nurse.loadedMonthAssignments[localWorkDate] = mappedShift;
   });
 
   nurses.forEach((nurse) => {
