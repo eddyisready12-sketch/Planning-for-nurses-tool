@@ -96,20 +96,20 @@ function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false)
   if (birthday && isWorkShift(shift)) {
     return (
       <div className={cn(
-        "relative overflow-hidden rounded-md",
+        "relative overflow-hidden rounded-md pointer-events-none",
         compact ? "inline-flex min-w-[44px] px-3 py-2" : "w-full h-8",
         getShiftBadgeClasses(shift)
       )}>
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_48%,rgba(255,255,255,0.95)_49%,rgba(255,255,255,0.95)_51%,transparent_52%)]" />
+        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(135deg,transparent_48%,rgba(255,255,255,0.95)_49%,rgba(255,255,255,0.95)_51%,transparent_52%)]" />
         <div className={cn(
-          "absolute left-1 font-black",
+          "absolute left-1 font-black pointer-events-none",
           compact ? "bottom-1 text-[11px]" : "bottom-0.5 text-[10px]"
         )}>
           {label}
         </div>
-        <div className="absolute right-0 top-0 h-0 w-0 border-l-[16px] border-l-transparent border-t-[16px] border-t-amber-200" />
+        <div className="absolute right-0 top-0 h-0 w-0 pointer-events-none border-l-[16px] border-l-transparent border-t-[16px] border-t-amber-200" />
         <div className={cn(
-          "absolute right-1 top-0.5 font-black text-amber-700",
+          "absolute right-1 top-0.5 font-black text-amber-700 pointer-events-none",
           compact ? "text-[9px]" : "text-[8px]"
         )}>
           O
@@ -121,7 +121,7 @@ function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false)
   if (birthday && shift === 'L') {
     return (
       <div className={cn(
-        "flex items-center justify-center rounded-md font-black",
+        "flex items-center justify-center rounded-md font-black pointer-events-none",
         compact ? "inline-flex min-w-[44px] px-3 py-2 text-xs" : "w-full h-8 text-[10px]",
         getShiftBadgeClasses('O')
       )}>
@@ -132,7 +132,7 @@ function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false)
 
   return (
     <div className={cn(
-      "flex items-center justify-center rounded-md font-black",
+      "flex items-center justify-center rounded-md font-black pointer-events-none",
       compact ? "inline-flex min-w-[44px] px-3 py-2 text-xs" : "w-full h-8 text-[10px]",
       getShiftBadgeClasses(shift)
     )}>
@@ -1115,10 +1115,12 @@ export default function App() {
                         >
                           <td
                             onClick={() => setSelectedNurseId(row.nurse.id)}
+                            data-no-drag-scroll="true"
                             className="sticky left-0 z-20 bg-white group-hover:bg-[#141414] p-4 border-r border-[#E5E5E1] font-mono text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis shadow-[4px_0_10px_rgba(0,0,0,0.03)] group-hover:shadow-none transition-colors cursor-pointer"
                           >
                             <div className="flex flex-col">
                               <div
+                                data-no-drag-scroll="true"
                                 role="button"
                                 tabIndex={0}
                                 onClick={(e) => {
