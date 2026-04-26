@@ -79,6 +79,22 @@ function includesAfternoonShift(shift: ShiftType) {
   return shift === 'T' || shift === 'MT';
 }
 
+function getDayCoverageUnits(shift: ShiftType) {
+  if (shift === 'GD' || shift === 'MT') {
+    return 1;
+  }
+
+  if (shift === 'M' || shift === 'T') {
+    return 0.5;
+  }
+
+  return 0;
+}
+
+function formatCoverageUnits(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
 function getShiftDisplayLabel(shift: ShiftType) {
   if (shift === 'V') return 'VAC';
   if (shift === 'LIC') return 'LIC';
@@ -517,11 +533,10 @@ export default function App() {
         const isLic = r.nurse.role === 'Licenciada';
         const isTec = r.nurse.role === 'Técnico';
 
-        if (dayShift === 'GD') {
-          gdCount++;
-          if (isLic) licGD++;
-          else if (isTec) tecGD++;
-        }
+        const dayCoverage = getDayCoverageUnits(dayShift || 'L');
+        gdCount += dayCoverage;
+        if (isLic) licGD += dayCoverage;
+        else if (isTec) tecGD += dayCoverage;
         if (dayShift === 'GN') {
           gnCount++;
           if (isLic) licGN++;
@@ -1394,7 +1409,7 @@ export default function App() {
                     {stats.map((stat, idx) => (
                       <td key={idx} className="p-1 border-r border-[#E5E5E1] bg-gray-50/50">
                         <div className="flex flex-col items-center justify-center py-1 gap-1">
-                          <span className="text-[10px] font-black text-blue-600 leading-none">{stat.GD}</span>
+                          <span className="text-[10px] font-black text-blue-600 leading-none">{formatCoverageUnits(stat.GD)}</span>
                           <span className="text-[10px] font-black text-indigo-900 leading-none">{stat.GN}</span>
                         </div>
                       </td>
@@ -1423,7 +1438,7 @@ export default function App() {
                             "px-1.5 py-0.5 rounded font-bold transition-all min-w-[28px] text-center flex items-center justify-center gap-0.5",
                             stat.licGD < 4 ? "bg-red-50 text-red-600 ring-1 ring-red-100" : "bg-blue-50 text-blue-700 font-black"
                           )}>
-                            {stat.licGD}
+                            {formatCoverageUnits(stat.licGD)}
                             {stat.licGD >= 4 && <Check size={10} className="text-green-600 stroke-[4px]" />}
                           </div>
                           <div className={cn(
@@ -1457,7 +1472,7 @@ export default function App() {
                       <td key={idx} className="p-1 border-r border-[#E5E5E1]">
                         <div className="flex flex-col items-center justify-center gap-1 py-1.5">
                           <div className="px-1.5 py-0.5 rounded font-bold text-blue-500 bg-gray-50 border border-blue-50 min-w-[24px] text-center">
-                            {stat.tecGD}
+                            {formatCoverageUnits(stat.tecGD)}
                           </div>
                           <div className="px-1.5 py-0.5 rounded font-bold text-indigo-400 bg-indigo-50 border border-indigo-100 min-w-[24px] text-center">
                             {stat.tecGN}
