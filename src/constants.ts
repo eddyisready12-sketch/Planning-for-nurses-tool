@@ -23,6 +23,7 @@ export const SHIFT_HOURS: Record<ShiftType, number> = {
   'MT': 12,
   'L': 0,
   'V': 0,
+  'LIC': 0,
   'O': 0,
 };
 
@@ -34,6 +35,7 @@ export const SHIFT_COLORS: Record<ShiftType, string> = {
   'MT': 'bg-gradient-to-b from-teal-50 to-orange-50 text-slate-700 border-slate-200',
   'L': 'bg-gray-50 text-gray-400 border-gray-100',
   'V': 'bg-rose-100 text-rose-700 border-rose-200',
+  'LIC': 'bg-violet-100 text-violet-700 border-violet-200',
   'O': 'bg-amber-100 text-amber-700 border-amber-200',
 };
 
@@ -45,6 +47,7 @@ export const SHIFT_LABELS: Record<ShiftType, string> = {
   'MT': 'Morning + Afternoon',
   'L': 'Off',
   'V': 'Vacation',
+  'LIC': 'License',
   'O': 'Birthday/Holiday',
 };
 

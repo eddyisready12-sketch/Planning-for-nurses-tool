@@ -81,6 +81,7 @@ function includesAfternoonShift(shift: ShiftType) {
 
 function getShiftDisplayLabel(shift: ShiftType) {
   if (shift === 'V') return 'VAC';
+  if (shift === 'LIC') return 'LIC';
   if (shift === 'GD') return 'D';
   if (shift === 'GN') return 'N';
   if (shift === 'MT') return 'M/T';
@@ -97,7 +98,8 @@ function getShiftBadgeClasses(shift: ShiftType) {
     shift === 'MT' && "bg-gradient-to-b from-teal-50 to-orange-50 text-slate-700 shadow-sm ring-1 ring-slate-200",
     shift === 'O' && "bg-amber-100 text-amber-700 shadow-sm ring-1 ring-amber-200",
     shift === 'L' && "bg-gray-100 text-gray-400 ring-1 ring-gray-100",
-    shift === 'V' && "bg-rose-100 text-rose-800 ring-1 ring-rose-200"
+    shift === 'V' && "bg-rose-100 text-rose-800 ring-1 ring-rose-200",
+    shift === 'LIC' && "bg-violet-100 text-violet-800 ring-1 ring-violet-200"
   );
 }
 
@@ -893,7 +895,7 @@ export default function App() {
       loadedMonthRef.current = format(importDate, 'yyyy-MM');
 
       const warningSuffix = pendingImport.result.warnings.length
-        ? ` ${pendingImport.result.warnings.length} leave note(s) were imported as vacation-style leave.`
+        ? ` ${pendingImport.result.warnings.length} import warning(s) were detected.`
         : '';
 
       if (getSupabaseConnectionSummary().configured) {
@@ -1207,6 +1209,10 @@ export default function App() {
                 <span className="w-10 h-6 flex items-center justify-center rounded bg-rose-100 text-rose-700 font-bold border border-rose-200 text-[10px]">VAC</span>
                 <span className="text-gray-600 font-medium">{t.vacation}</span>
               </div>
+              <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+                <span className="w-10 h-6 flex items-center justify-center rounded bg-violet-100 text-violet-700 font-bold border border-violet-200 text-[10px]">LIC</span>
+                <span className="text-gray-600 font-medium">License</span>
+              </div>
             </div>
 
             {/* Roster Grid Container */}
@@ -1310,7 +1316,7 @@ export default function App() {
                           </td>
                           {row.days.map((day, idx) => (
                             (() => {
-                              const birthday = day.shift !== 'V' && day.shift !== 'O' && isBirthdayForDate(row.nurse, parseISO(day.date));
+                              const birthday = day.shift !== 'V' && day.shift !== 'LIC' && day.shift !== 'O' && isBirthdayForDate(row.nurse, parseISO(day.date));
                               return (
                                 <td 
                                   key={idx} 
@@ -1360,7 +1366,7 @@ export default function App() {
                             {row.days.filter(d => d.shift === 'GN' && format(parseISO(d.date), 'EEEEEE') === 'Su').length}
                           </td>
                           <td className="p-2 text-center font-mono text-[11px] text-gray-600 border-r border-[#E5E5E1] bg-gray-50/20">
-                            {row.days.filter((d) => d.shift === 'O' || (d.shift !== 'V' && isBirthdayForDate(row.nurse, parseISO(d.date)))).length}
+                            {row.days.filter((d) => d.shift === 'O' || (d.shift !== 'V' && d.shift !== 'LIC' && isBirthdayForDate(row.nurse, parseISO(d.date)))).length}
                           </td>
                           <td className="p-2 text-center font-mono text-[11px] text-blue-700 border-r border-[#E5E5E1] bg-blue-50/30 font-black">
                             {row.days.filter(d => d.shift === 'GD' && format(parseISO(d.date), 'EEEEEE') === 'Su').length}
@@ -1775,7 +1781,7 @@ export default function App() {
               <div className="px-3 py-1.5 text-[9px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50 mb-1">
                 {t.setShift}
               </div>
-              {(['GD', 'GN', 'M', 'T', 'MT', 'O', 'L', 'V'] as ShiftType[]).map(s => (
+              {(['GD', 'GN', 'M', 'T', 'MT', 'O', 'L', 'V', 'LIC'] as ShiftType[]).map(s => (
                 <button
                   key={s}
                   onClick={() => {
@@ -1793,9 +1799,10 @@ export default function App() {
                     s === 'MT' && "bg-gradient-to-b from-teal-50 to-orange-50 text-slate-700",
                     s === 'O' && "bg-amber-100 text-amber-700",
                     s === 'L' && "bg-gray-100 text-gray-400",
-                    s === 'V' && "bg-rose-100 text-rose-800"
+                    s === 'V' && "bg-rose-100 text-rose-800",
+                    s === 'LIC' && "bg-violet-100 text-violet-800"
                   )}>
-                    {s === 'GD' ? 'D' : (s === 'GN' ? 'N' : (s === 'V' ? 'VAC' : (s === 'MT' ? 'M/T' : s)))}
+                    {s === 'GD' ? 'D' : (s === 'GN' ? 'N' : (s === 'V' ? 'VAC' : (s === 'LIC' ? 'LIC' : (s === 'MT' ? 'M/T' : s))))}
                   </div>
                   <span className="text-xs font-medium text-gray-700">
                     {SHIFT_LABELS[s]}
@@ -2239,7 +2246,7 @@ export default function App() {
                   <h4 className="text-xs font-black uppercase tracking-[0.25em] text-gray-400 mb-4">Monthly overview</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {selectedRosterMember.days.map((day) => {
-                      const birthday = day.shift !== 'V' && day.shift !== 'O' && isBirthdayForDate(selectedRosterMember.nurse, parseISO(day.date));
+                      const birthday = day.shift !== 'V' && day.shift !== 'LIC' && day.shift !== 'O' && isBirthdayForDate(selectedRosterMember.nurse, parseISO(day.date));
                       return (
                         <button
                           key={day.date}

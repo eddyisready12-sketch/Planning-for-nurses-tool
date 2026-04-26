@@ -260,6 +260,7 @@ export function importRosterWorkbook(fileBuffer: ArrayBuffer, fallbackDate: Date
     const nextRow = rows[pairRowIndex] || [];
     const mergedLeaveDays = new Set<number>();
     const vacations: Nurse['vacations'] = [];
+    const leaveOverrides: Record<string, ShiftType> = {};
 
     const pairMerges = merges.filter(
       (merge) =>
@@ -279,7 +280,7 @@ export function importRosterWorkbook(fileBuffer: ArrayBuffer, fallbackDate: Date
         return;
       }
 
-      if (normalizedLabel.includes('VACACIONES') || normalizedLabel.includes('LICENCIA')) {
+      if (normalizedLabel.includes('VACACIONES')) {
         vacations.push({
           start: format(new Date(importDate.getFullYear(), importDate.getMonth(), startDay), 'yyyy-MM-dd'),
           end: format(new Date(importDate.getFullYear(), importDate.getMonth(), endDay), 'yyyy-MM-dd'),
@@ -288,9 +289,11 @@ export function importRosterWorkbook(fileBuffer: ArrayBuffer, fallbackDate: Date
         for (let day = startDay; day <= endDay; day += 1) {
           mergedLeaveDays.add(day);
         }
-
-        if (normalizedLabel.includes('LICENCIA')) {
-          warnings.push(`${String(row[0]).trim()}: LICENCIA imported as vacation-style leave for now.`);
+      } else if (normalizedLabel.includes('LICENCIA')) {
+        for (let day = startDay; day <= endDay; day += 1) {
+          const dateKey = format(new Date(importDate.getFullYear(), importDate.getMonth(), day), 'yyyy-MM-dd');
+          mergedLeaveDays.add(day);
+          leaveOverrides[dateKey] = 'LIC';
         }
       }
     });
@@ -308,7 +311,7 @@ export function importRosterWorkbook(fileBuffer: ArrayBuffer, fallbackDate: Date
       archived: false,
       vacations,
       hiringDate: '2020-01-01',
-      overrides: {},
+      overrides: { ...leaveOverrides },
     };
 
     for (let day = 1; day <= daysInMonth; day += 1) {

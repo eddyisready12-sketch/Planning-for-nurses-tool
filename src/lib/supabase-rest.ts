@@ -169,6 +169,7 @@ const UI_TO_DB_SHIFT: Record<ShiftType, string> = {
   MT: 'MT',
   L: 'L',
   V: 'VAC',
+  LIC: 'LIC',
   O: 'O',
 };
 
@@ -180,7 +181,7 @@ const DB_TO_UI_SHIFT: Record<string, ShiftType | null> = {
   MT: 'MT',
   L: 'L',
   VAC: 'V',
-  LIC: 'V',
+  LIC: 'LIC',
   O: 'O',
 };
 
@@ -485,12 +486,12 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       return;
     }
 
-    if (entry.leave_code === 'O') {
+    if (entry.leave_code === 'O' || entry.leave_code === 'LIC') {
       const start = new Date(`${entry.start_date}T00:00:00`);
       const end = new Date(`${entry.end_date}T00:00:00`);
       for (let date = start; date <= end; date = new Date(date.getTime() + 86400000)) {
         nurse.overrides = nurse.overrides || {};
-        nurse.overrides[format(date, 'yyyy-MM-dd')] = 'O';
+        nurse.overrides[format(date, 'yyyy-MM-dd')] = entry.leave_code === 'LIC' ? 'LIC' : 'O';
       }
       return;
     }
@@ -639,11 +640,11 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
     });
 
     Object.entries(nurse.overrides || {}).forEach(([date, shift]) => {
-      if (shift === 'O') {
+      if (shift === 'O' || shift === 'LIC') {
         const row = {
           page_slug: pageSlug,
           staff_name: nurse.name,
-          leave_code: 'O',
+          leave_code: shift === 'LIC' ? 'LIC' : 'O',
           start_date: date,
           end_date: date,
         };
