@@ -28,7 +28,7 @@ export function getShiftForDate(nurse: Nurse, date: Date): ShiftType {
     const start = parseISO(range.start);
     const end = parseISO(range.end);
     if (isWithinInterval(date, { start, end })) {
-      return 'V';
+      return 'VAC';
     }
   }
 

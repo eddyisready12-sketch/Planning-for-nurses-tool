@@ -136,7 +136,7 @@ function getSingleShiftCode(
   }
 
   if (normalized === 'GD') {
-    return 'GD';
+    return 'D';
   }
 
   if (normalized === 'D') {
@@ -146,7 +146,7 @@ function getSingleShiftCode(
       context.groupId === 'TEC_CAS' ||
       context.groupId === 'DESTACADO'
     ) {
-      return 'GD';
+      return 'D';
     }
 
     // In the nursing sections of this workbook, plain D is used as descanso/rest.
@@ -154,7 +154,7 @@ function getSingleShiftCode(
   }
 
   if (normalized === 'N' || normalized === 'GN') {
-    return 'GN';
+    return 'N';
   }
 
   if (normalized === 'M') {
@@ -360,3 +360,4 @@ export function importRosterWorkbook(fileBuffer: ArrayBuffer, fallbackDate: Date
     warnings,
   };
 }
+

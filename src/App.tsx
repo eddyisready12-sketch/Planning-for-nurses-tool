@@ -68,7 +68,7 @@ function formatVacationDays(value: number) {
 }
 
 function isWorkShift(shift: ShiftType) {
-  return shift === 'GD' || shift === 'GN' || shift === 'M' || shift === 'T' || shift === 'MT';
+  return shift === 'D' || shift === 'N' || shift === 'M' || shift === 'T' || shift === 'MT';
 }
 
 function includesMorningShift(shift: ShiftType) {
@@ -80,7 +80,7 @@ function includesAfternoonShift(shift: ShiftType) {
 }
 
 function getDayCoverageUnits(shift: ShiftType) {
-  if (shift === 'GD' || shift === 'MT') {
+  if (shift === 'D' || shift === 'MT') {
     return 1;
   }
 
@@ -96,10 +96,10 @@ function formatCoverageUnits(value: number) {
 }
 
 function getShiftDisplayLabel(shift: ShiftType) {
-  if (shift === 'V') return 'VAC';
+  if (shift === 'VAC') return 'VAC';
   if (shift === 'LIC') return 'LIC';
-  if (shift === 'GD') return 'D';
-  if (shift === 'GN') return 'N';
+  if (shift === 'D') return 'D';
+  if (shift === 'N') return 'N';
   if (shift === 'MT') return 'M/T';
   if (shift === 'L') return '-';
   return shift;
@@ -107,14 +107,14 @@ function getShiftDisplayLabel(shift: ShiftType) {
 
 function getShiftBadgeClasses(shift: ShiftType) {
   return cn(
-    shift === 'GD' && "bg-blue-100 text-blue-700 shadow-sm ring-1 ring-blue-200",
-    shift === 'GN' && "bg-indigo-900 text-white shadow-xl ring-1 ring-indigo-950",
+    shift === 'D' && "bg-blue-100 text-blue-700 shadow-sm ring-1 ring-blue-200",
+    shift === 'N' && "bg-indigo-900 text-white shadow-xl ring-1 ring-indigo-950",
     shift === 'M' && "bg-teal-50 text-teal-700 shadow-sm ring-1 ring-teal-100",
     shift === 'T' && "bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100",
     shift === 'MT' && "bg-gradient-to-b from-teal-50 to-orange-50 text-slate-700 shadow-sm ring-1 ring-slate-200",
     shift === 'O' && "bg-amber-100 text-amber-700 shadow-sm ring-1 ring-amber-200",
     shift === 'L' && "bg-gray-100 text-gray-400 ring-1 ring-gray-100",
-    shift === 'V' && "bg-rose-100 text-rose-800 ring-1 ring-rose-200",
+    shift === 'VAC' && "bg-rose-100 text-rose-800 ring-1 ring-rose-200",
     shift === 'LIC' && "bg-violet-100 text-violet-800 ring-1 ring-violet-200"
   );
 }
@@ -151,16 +151,16 @@ function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false)
       <div className={cn(
         "grid overflow-hidden rounded-md pointer-events-none border",
         compact ? "inline-grid min-w-[44px] grid-rows-2" : "grid h-8 w-full grid-rows-2",
-        shift === 'GD' && "border-blue-200",
-        shift === 'GN' && "border-indigo-950",
+        shift === 'D' && "border-blue-200",
+        shift === 'N' && "border-indigo-950",
         shift === 'M' && "border-teal-100",
         shift === 'T' && "border-orange-100"
       )}>
         <div className={cn(
           "flex items-center justify-center font-black pointer-events-none border-b",
           compact ? "px-3 py-1 text-[10px]" : "text-[10px]",
-          shift === 'GD' && "bg-blue-100 text-blue-700 border-blue-200",
-          shift === 'GN' && "bg-indigo-900 text-white border-indigo-950",
+          shift === 'D' && "bg-blue-100 text-blue-700 border-blue-200",
+          shift === 'N' && "bg-indigo-900 text-white border-indigo-950",
           shift === 'M' && "bg-teal-50 text-teal-700 border-teal-100",
           shift === 'T' && "bg-orange-50 text-orange-700 border-orange-100"
         )}>
@@ -500,17 +500,17 @@ export default function App() {
       return null;
     }
 
-    const monthlyVacationDays = selectedRosterMember.days.filter((day) => day.shift === 'V').length;
+    const monthlyVacationDays = selectedRosterMember.days.filter((day) => day.shift === 'VAC').length;
     const nurseWithoutVacation = {
       ...selectedRosterMember.nurse,
       vacations: [],
       overrides: Object.fromEntries(
-        Object.entries(selectedRosterMember.nurse.overrides || {}).filter(([, shift]) => shift !== 'V')
+        Object.entries(selectedRosterMember.nurse.overrides || {}).filter(([, shift]) => shift !== 'VAC')
       ),
     };
 
     const monthlyVacationHours = selectedRosterMember.days.reduce((sum, day) => {
-      if (day.shift !== 'V') {
+      if (day.shift !== 'VAC') {
         return sum;
       }
 
@@ -518,7 +518,7 @@ export default function App() {
       return sum + SHIFT_HOURS[originalShift];
     }, 0);
     const monthlyVacationWorkDays = selectedRosterMember.days.reduce((sum, day) => {
-      if (day.shift !== 'V') {
+      if (day.shift !== 'VAC') {
         return sum;
       }
 
@@ -584,7 +584,7 @@ export default function App() {
       ...selectedRosterMember.nurse,
       vacations: [],
       overrides: Object.fromEntries(
-        Object.entries(selectedRosterMember.nurse.overrides || {}).filter(([, shift]) => shift !== 'V')
+        Object.entries(selectedRosterMember.nurse.overrides || {}).filter(([, shift]) => shift !== 'VAC')
       ),
     };
 
@@ -592,7 +592,7 @@ export default function App() {
       (summary, day) => {
         const scheduledShift = getShiftForDate(nurseWithoutVacation, parseISO(day.date));
         const plannedHours = SHIFT_HOURS[scheduledShift];
-        const creditedHours = day.shift === 'V' ? plannedHours : SHIFT_HOURS[day.shift];
+        const creditedHours = day.shift === 'VAC' ? plannedHours : SHIFT_HOURS[day.shift];
 
         summary.plannedHours += plannedHours;
         summary.creditedHours += creditedHours;
@@ -625,7 +625,7 @@ export default function App() {
         gdCount += dayCoverage;
         if (isLic) licGD += dayCoverage;
         else if (isTec) tecGD += dayCoverage;
-        if (dayShift === 'GN') {
+        if (dayShift === 'N') {
           gnCount++;
           if (isLic) licGN++;
           else if (isTec) tecGN++;
@@ -635,7 +635,7 @@ export default function App() {
       });
       return { 
         date: dateStr, 
-        GD: gdCount, GN: gnCount, M: mCount, T: tCount,
+        D: gdCount, N: gnCount, M: mCount, T: tCount,
         licGD, licGN, tecGD, tecGN
       };
     });
@@ -1033,7 +1033,7 @@ export default function App() {
         const newOverrides = { ...(n.overrides || {}) };
         let newVacations = n.vacations;
 
-        if (shift === null || shift !== 'V') {
+        if (shift === null || shift !== 'VAC') {
           newVacations = removeDateFromVacationRanges(n.vacations, date);
         }
 
@@ -1090,7 +1090,7 @@ export default function App() {
             {t.ruleEngine}
           </div>
           <ul className="space-y-1.5 text-gray-600">
-            <li>• {t.rotation}: GD → GN → L → L → L</li>
+            <li>- {t.rotation}: D &rarr; N &rarr; L &rarr; L &rarr; L</li>
             <li>• {t.shiftLength}: 12 Hours</li>
             <li>• {t.target}: 144 Hours / Month</li>
             <li>• {t.staffing}: Min 4 Nurses / Shift</li>
@@ -1390,8 +1390,8 @@ export default function App() {
                             </div>
                           </td>
                         ))}
-                        <td className="p-1 text-center text-[9px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">GD</td>
-                        <td className="p-1 text-center text-[9px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">GN</td>
+                        <td className="p-1 text-center text-[9px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">D</td>
+                        <td className="p-1 text-center text-[9px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">N</td>
                         <td className="p-1 text-center text-[9px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">M</td>
                         <td className="p-1 text-center text-[9px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">T</td>
                         <td className="p-1 text-center text-[8px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">Sun. Night</td>
@@ -1433,7 +1433,7 @@ export default function App() {
                           </td>
                           {row.days.map((day, idx) => (
                             (() => {
-                              const birthday = day.shift !== 'V' && day.shift !== 'LIC' && day.shift !== 'O' && isBirthdayForDate(row.nurse, parseISO(day.date));
+                              const birthday = day.shift !== 'VAC' && day.shift !== 'LIC' && day.shift !== 'O' && isBirthdayForDate(row.nurse, parseISO(day.date));
                               return (
                                 <td 
                                   key={idx} 
@@ -1468,10 +1468,10 @@ export default function App() {
                             })()
                           ))}
                            <td className="p-2 text-center font-mono text-[11px] text-gray-600 border-r border-[#E5E5E1] bg-gray-50/20">
-                            {row.days.filter(d => d.shift === 'GD').length}
+                            {row.days.filter(d => d.shift === 'D').length}
                           </td>
                           <td className="p-2 text-center font-mono text-[11px] text-gray-600 border-r border-[#E5E5E1] bg-gray-50/20">
-                            {row.days.filter(d => d.shift === 'GN').length}
+                            {row.days.filter(d => d.shift === 'N').length}
                           </td>
                           <td className="p-2 text-center font-mono text-[11px] text-gray-600 border-r border-[#E5E5E1] bg-gray-50/20">
                             {row.days.filter(d => includesMorningShift(d.shift)).length}
@@ -1480,13 +1480,13 @@ export default function App() {
                             {row.days.filter(d => includesAfternoonShift(d.shift)).length}
                           </td>
                           <td className="p-2 text-center font-mono text-[11px] text-indigo-700 border-r border-[#E5E5E1] bg-indigo-50/30 font-black">
-                            {row.days.filter(d => d.shift === 'GN' && format(parseISO(d.date), 'EEEEEE') === 'Su').length}
+                            {row.days.filter(d => d.shift === 'N' && format(parseISO(d.date), 'EEEEEE') === 'Su').length}
                           </td>
                           <td className="p-2 text-center font-mono text-[11px] text-gray-600 border-r border-[#E5E5E1] bg-gray-50/20">
-                            {row.days.filter((d) => d.shift === 'O' || (d.shift !== 'V' && d.shift !== 'LIC' && isBirthdayForDate(row.nurse, parseISO(d.date)))).length}
+                            {row.days.filter((d) => d.shift === 'O' || (d.shift !== 'VAC' && d.shift !== 'LIC' && isBirthdayForDate(row.nurse, parseISO(d.date)))).length}
                           </td>
                           <td className="p-2 text-center font-mono text-[11px] text-blue-700 border-r border-[#E5E5E1] bg-blue-50/30 font-black">
-                            {row.days.filter(d => d.shift === 'GD' && format(parseISO(d.date), 'EEEEEE') === 'Su').length}
+                            {row.days.filter(d => d.shift === 'D' && format(parseISO(d.date), 'EEEEEE') === 'Su').length}
                           </td>
                           <td className="p-2 text-center font-mono text-xs font-black bg-blue-50/30 text-blue-700 group-hover:bg-transparent">
                             {row.totalHours}h
@@ -1511,8 +1511,8 @@ export default function App() {
                     {stats.map((stat, idx) => (
                       <td key={idx} className="p-1 border-r border-[#E5E5E1] bg-gray-50/50">
                         <div className="flex flex-col items-center justify-center py-1 gap-1">
-                          <span className="text-[10px] font-black text-blue-600 leading-none">{formatCoverageUnits(stat.GD)}</span>
-                          <span className="text-[10px] font-black text-indigo-900 leading-none">{stat.GN}</span>
+                          <span className="text-[10px] font-black text-blue-600 leading-none">{formatCoverageUnits(stat.D)}</span>
+                          <span className="text-[10px] font-black text-indigo-900 leading-none">{stat.N}</span>
                         </div>
                       </td>
                     ))}
@@ -1899,7 +1899,7 @@ export default function App() {
               <div className="px-3 py-1.5 text-[9px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50 mb-1">
                 {t.setShift}
               </div>
-              {(['GD', 'GN', 'M', 'T', 'MT', 'O', 'L', 'V', 'LIC'] as ShiftType[]).map(s => (
+              {(['D', 'N', 'M', 'T', 'MT', 'O', 'L', 'VAC', 'LIC'] as ShiftType[]).map(s => (
                 <button
                   key={s}
                   onClick={() => {
@@ -1910,17 +1910,17 @@ export default function App() {
                 >
                   <div className={cn(
                     "w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold",
-                    s === 'GD' && "bg-blue-100 text-blue-700",
-                    s === 'GN' && "bg-indigo-900 text-white",
+                    s === 'D' && "bg-blue-100 text-blue-700",
+                    s === 'N' && "bg-indigo-900 text-white",
                     s === 'M' && "bg-teal-50 text-teal-700",
                     s === 'T' && "bg-orange-50 text-orange-700",
                     s === 'MT' && "bg-gradient-to-b from-teal-50 to-orange-50 text-slate-700",
                     s === 'O' && "bg-amber-100 text-amber-700",
                     s === 'L' && "bg-gray-100 text-gray-400",
-                    s === 'V' && "bg-rose-100 text-rose-800",
+                    s === 'VAC' && "bg-rose-100 text-rose-800",
                     s === 'LIC' && "bg-violet-100 text-violet-800"
                   )}>
-                    {s === 'GD' ? 'D' : (s === 'GN' ? 'N' : (s === 'V' ? 'VAC' : (s === 'LIC' ? 'LIC' : (s === 'MT' ? 'M/T' : s))))}
+                    {s === 'D' ? 'D' : (s === 'N' ? 'N' : (s === 'VAC' ? 'VAC' : (s === 'LIC' ? 'LIC' : (s === 'MT' ? 'M/T' : s))))}
                   </div>
                   <span className="text-xs font-medium text-gray-700">
                     {SHIFT_LABELS[s]}
@@ -2244,7 +2244,7 @@ export default function App() {
                 <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
                   <div className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Day / Night</div>
                   <div className="mt-2 text-2xl font-bold text-indigo-700">
-                    {selectedRosterMember.days.filter((d) => d.shift === 'GD').length} / {selectedRosterMember.days.filter((d) => d.shift === 'GN').length}
+                    {selectedRosterMember.days.filter((d) => d.shift === 'D').length} / {selectedRosterMember.days.filter((d) => d.shift === 'N').length}
                   </div>
                 </div>
                 <div className={cn(
@@ -2364,7 +2364,7 @@ export default function App() {
                   <h4 className="text-xs font-black uppercase tracking-[0.25em] text-gray-400 mb-4">Monthly overview</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {selectedRosterMember.days.map((day) => {
-                      const birthday = day.shift !== 'V' && day.shift !== 'LIC' && day.shift !== 'O' && isBirthdayForDate(selectedRosterMember.nurse, parseISO(day.date));
+                      const birthday = day.shift !== 'VAC' && day.shift !== 'LIC' && day.shift !== 'O' && isBirthdayForDate(selectedRosterMember.nurse, parseISO(day.date));
                       return (
                         <button
                           key={day.date}
@@ -2571,3 +2571,5 @@ export default function App() {
     </div>
   );
 }
+
+

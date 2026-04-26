@@ -16,39 +16,39 @@ export const STAFF_GROUP_LABELS: Record<StaffGroupId, string> = {
 };
 
 export const SHIFT_HOURS: Record<ShiftType, number> = {
-  'GD': 12,
-  'GN': 12,
+  'D': 12,
+  'N': 12,
   'M': 6,
   'T': 6,
   'MT': 12,
   'L': 0,
-  'V': 0,
+  'VAC': 0,
   'LIC': 0,
   'O': 0,
 };
 
 export const SHIFT_COLORS: Record<ShiftType, string> = {
-  'GD': 'bg-blue-100 text-blue-700 border-blue-200',
-  'GN': 'bg-indigo-900 text-indigo-100 border-indigo-800',
+  'D': 'bg-blue-100 text-blue-700 border-blue-200',
+  'N': 'bg-indigo-900 text-indigo-100 border-indigo-800',
   'M': 'bg-teal-50 text-teal-700 border-teal-100',
   'T': 'bg-orange-50 text-orange-700 border-orange-100',
   'MT': 'bg-gradient-to-b from-teal-50 to-orange-50 text-slate-700 border-slate-200',
   'L': 'bg-gray-50 text-gray-400 border-gray-100',
-  'V': 'bg-rose-100 text-rose-700 border-rose-200',
+  'VAC': 'bg-rose-100 text-rose-700 border-rose-200',
   'LIC': 'bg-violet-100 text-violet-700 border-violet-200',
   'O': 'bg-amber-100 text-amber-700 border-amber-200',
 };
 
 export const SHIFT_LABELS: Record<ShiftType, string> = {
-  'GD': 'Day Guard',
-  'GN': 'Night Guard',
+  'D': 'Day Guard',
+  'N': 'Night Guard',
   'M': 'Morning',
   'T': 'Afternoon',
   'MT': 'Morning + Afternoon',
   'L': 'Off',
-  'V': 'Vacation',
+  'VAC': 'Vacation',
   'LIC': 'License',
   'O': 'Birthday/Holiday',
 };
 
-export const ROTATION_PATTERN: ShiftType[] = ['GD', 'GN', 'L', 'L', 'L'];
+export const ROTATION_PATTERN: ShiftType[] = ['D', 'N', 'L', 'L', 'L'];

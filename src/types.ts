@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type ShiftType = 'GD' | 'GN' | 'M' | 'T' | 'MT' | 'L' | 'V' | 'LIC' | 'O';
+export type ShiftType = 'D' | 'N' | 'M' | 'T' | 'MT' | 'L' | 'VAC' | 'LIC' | 'O';
 
 export interface VacationRange {
   start: string;

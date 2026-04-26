@@ -168,25 +168,25 @@ const GROUP_NAME_TO_ID = Object.entries(STAFF_GROUP_LABELS).reduce((acc, [key, v
 }, {} as Record<string, StaffGroupId>);
 
 const UI_TO_DB_SHIFT: Record<ShiftType, string> = {
-  GD: 'D',
-  GN: 'N',
+  D: 'D',
+  N: 'N',
   M: 'M',
   T: 'T',
   MT: 'MT',
   L: 'L',
-  V: 'VAC',
+  VAC: 'VAC',
   LIC: 'LIC',
   O: 'O',
 };
 
 const DB_TO_UI_SHIFT: Record<string, ShiftType | null> = {
-  D: 'GD',
-  N: 'GN',
+  D: 'D',
+  N: 'N',
   M: 'M',
   T: 'T',
   MT: 'MT',
   L: 'L',
-  VAC: 'V',
+  VAC: 'VAC',
   LIC: 'LIC',
   O: 'O',
 };
@@ -394,7 +394,7 @@ function buildVacationBalanceRows(currentDate: Date, nurses: Nurse[], pageSlug: 
       vacations: [],
       loadedMonthAssignments: undefined,
       overrides: Object.fromEntries(
-        Object.entries(nurse.overrides || {}).filter(([, shift]) => shift !== 'V')
+        Object.entries(nurse.overrides || {}).filter(([, shift]) => shift !== 'VAC')
       ),
     };
 
@@ -563,11 +563,11 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       return;
     }
 
-    if (mappedShift === 'V') {
+    if (mappedShift === 'VAC') {
       appendVacationRange(nurse, localWorkDate, localWorkDate);
     }
 
-    if (mappedShift !== 'V') {
+    if (mappedShift !== 'VAC') {
       nurse.overrides = nurse.overrides || {};
       nurse.overrides[localWorkDate] = mappedShift;
     }
@@ -647,7 +647,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
     const normalizedVacationRanges = normalizeVacationRanges([
       ...nurse.vacations,
       ...Object.entries(nurse.overrides || {})
-        .filter(([, shift]) => shift === 'V')
+        .filter(([, shift]) => shift === 'VAC')
         .map(([date]) => ({ start: date, end: date })),
     ]);
 
@@ -708,7 +708,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
         vacations: [],
         loadedMonthAssignments: undefined,
         overrides: Object.fromEntries(
-          Object.entries(item.nurse.overrides || {}).filter(([, shift]) => shift !== 'V')
+          Object.entries(item.nurse.overrides || {}).filter(([, shift]) => shift !== 'VAC')
         ),
       };
       const scheduledShift = getShiftForDate(nurseWithoutVacation, parseISO(day.date));
@@ -721,7 +721,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
         work_date: day.date,
         shift_code: UI_TO_DB_SHIFT[day.shift],
         scheduled_shift_code: UI_TO_DB_SHIFT[scheduledShift],
-        credited_hours: day.shift === 'V' ? SHIFT_HOURS[scheduledShift] : SHIFT_HOURS[day.shift],
+        credited_hours: day.shift === 'VAC' ? SHIFT_HOURS[scheduledShift] : SHIFT_HOURS[day.shift],
       };
     })
   );
@@ -744,3 +744,4 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
     assignmentCount: assignmentRows.length,
   };
 }
+
