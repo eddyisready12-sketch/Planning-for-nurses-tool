@@ -26,6 +26,12 @@ export function getShiftForDate(nurse: Nurse, date: Date): ShiftType {
     }
   }
 
+  // When a month is loaded from Supabase, use the saved assignment for that date
+  // so the UI reflects the imported/saved roster exactly.
+  if (nurse.loadedMonthAssignments && nurse.loadedMonthAssignments[dateStr]) {
+    return nurse.loadedMonthAssignments[dateStr];
+  }
+
   // Calculate day in rotation
   // We use the hiring date as a reference Point 0 for the cycle
   // Every nurse starts their Team rotation pattern offset by their teamId

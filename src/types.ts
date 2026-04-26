@@ -32,6 +32,7 @@ export interface Nurse {
   vacations: VacationRange[];
   hiringDate: string;
   overrides?: Record<string, ShiftType>;
+  loadedMonthAssignments?: Record<string, ShiftType>;
 }
 
 export interface RosterDay {

@@ -205,6 +205,7 @@ type AssignmentRow = {
   staff_name: string;
   work_date: string;
   shift_code: string;
+  scheduled_shift_code?: string;
 };
 
 type MonthlyPlanRow = {
@@ -367,6 +368,7 @@ function buildVacationBalanceRows(currentDate: Date, nurses: Nurse[], pageSlug: 
     const nurseWithoutVacation = {
       ...nurse,
       vacations: [],
+      loadedMonthAssignments: undefined,
       overrides: Object.fromEntries(
         Object.entries(nurse.overrides || {}).filter(([, shift]) => shift !== 'V')
       ),
@@ -445,7 +447,7 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       `leave_entries?select=staff_name,leave_code,start_date,end_date&page_slug=eq.${encodeURIComponent(pageSlug)}&order=start_date.asc`
     ),
     request<AssignmentRow[]>(
-      `roster_assignments?select=staff_name,work_date,shift_code&page_slug=eq.${encodeURIComponent(pageSlug)}&month_key=eq.${monthKey}`
+      `roster_assignments?select=staff_name,work_date,shift_code,scheduled_shift_code&page_slug=eq.${encodeURIComponent(pageSlug)}&month_key=eq.${monthKey}`
     ),
     request<MonthlyPlanRow[]>(
       `monthly_plans?select=month_key&page_slug=eq.${encodeURIComponent(pageSlug)}&month_key=eq.${monthKey}&limit=1`
@@ -475,6 +477,7 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       vacations: [],
       hiringDate: fallback?.hiringDate || '2020-01-01',
       overrides: {},
+      loadedMonthAssignments: {},
     } satisfies Nurse;
   });
 
@@ -522,35 +525,14 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       return;
     }
 
-    const baselineShift = getShiftForDate(
-      {
-        ...nurse,
-        overrides: {},
-      },
-      entryDate
-    );
-
-    const legacyBaselineShift = getShiftForDate(
-      {
-        ...nurse,
-        birthDate: undefined,
-        overrides: {},
-      },
-      entryDate
-    );
-
-    if (mappedShift === baselineShift) {
+    if (mappedShift === 'O' || mappedShift === 'LIC') {
+      nurse.overrides = nurse.overrides || {};
+      nurse.overrides[entry.work_date] = mappedShift;
       return;
     }
 
-    // If this saved assignment only differs because birthdays were introduced later,
-    // keep the birthday-generated O instead of treating the old saved shift as a manual override.
-    if (baselineShift === 'O' && mappedShift === legacyBaselineShift) {
-      return;
-    }
-
-    nurse.overrides = nurse.overrides || {};
-    nurse.overrides[entry.work_date] = mappedShift;
+    nurse.loadedMonthAssignments = nurse.loadedMonthAssignments || {};
+    nurse.loadedMonthAssignments[entry.work_date] = mappedShift;
   });
 
   nurses.forEach((nurse) => {
@@ -683,6 +665,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
       const nurseWithoutVacation = {
         ...item.nurse,
         vacations: [],
+        loadedMonthAssignments: undefined,
         overrides: Object.fromEntries(
           Object.entries(item.nurse.overrides || {}).filter(([, shift]) => shift !== 'V')
         ),
