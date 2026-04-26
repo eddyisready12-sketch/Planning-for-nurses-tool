@@ -1242,6 +1242,20 @@ export default function App() {
                 className="overflow-x-auto overflow-y-visible relative cursor-grab active:cursor-grabbing rounded-2xl"
               >
                 <table className="w-full border-collapse table-fixed min-w-[2000px]">
+                <colgroup>
+                  <col style={{ width: '240px' }} />
+                  {daysInMonth.map((day) => (
+                    <col key={`day-col-${day.toISOString()}`} style={{ width: '48px' }} />
+                  ))}
+                  <col style={{ width: '48px' }} />
+                  <col style={{ width: '48px' }} />
+                  <col style={{ width: '48px' }} />
+                  <col style={{ width: '48px' }} />
+                  <col style={{ width: '64px' }} />
+                  <col style={{ width: '64px' }} />
+                  <col style={{ width: '64px' }} />
+                  <col style={{ width: '80px' }} />
+                </colgroup>
                 <tbody className="divide-y divide-[#E5E5E1]">
                   {(Object.entries(groupedRoster) as [string, NurseRoster[]][]).map(([groupId, groupRows]) => (
                     <React.Fragment key={groupId}>
