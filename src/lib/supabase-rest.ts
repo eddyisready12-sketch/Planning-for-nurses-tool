@@ -486,7 +486,7 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
     };
   }
 
-  const nurses = staffRows.map((row, index) => {
+  const nurses: Nurse[] = staffRows.map((row, index) => {
     const fallback = fallbackByName.get(normalizeName(row.full_name));
     const mappedGroupId = mapGroupNameToId(row.group_name, fallback?.groupId);
     const groupId = inferGroupFromName(row.full_name, mappedGroupId);
@@ -506,6 +506,26 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
   });
 
   const nurseByName = new Map(nurses.map((nurse) => [normalizeName(nurse.name), nurse]));
+
+  // Also create nurse stubs from assignment rows not matched to staff_members
+  assignmentRows.forEach((entry) => {
+    const key = normalizeName(entry.staff_name);
+    if (!nurseByName.has(key)) {
+      const stub: Nurse = {
+        id: createNurseId(entry.staff_name, nurses.length),
+        name: entry.staff_name,
+        role: 'Técnico',
+        groupId: 'TEC_CAS',
+        teamId: 0,
+        vacations: [],
+        hiringDate: '2020-01-01',
+        overrides: {},
+        loadedMonthAssignments: {},
+      };
+      nurses.push(stub);
+      nurseByName.set(key, stub);
+    }
+  });
 
   leaveRows.forEach((entry) => {
     const nurse = nurseByName.get(normalizeName(entry.staff_name));
@@ -536,6 +556,7 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
     const mappedShift = DB_TO_UI_SHIFT[normalizedShiftCode];
     const localWorkDate = normalizeDbDateToLocalDate(entry.work_date);
     if (!nurse || !mappedShift) {
+      console.warn('[Hospithro] Skipped assignment row:', entry.staff_name, entry.shift_code);
       return;
     }
 
