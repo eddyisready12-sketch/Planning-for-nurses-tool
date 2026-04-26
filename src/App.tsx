@@ -626,6 +626,15 @@ export default function App() {
     await persistNurseChanges(nextNurses, 'Team updated.');
   };
 
+  const updateNurseBirthDate = async (nurseId: string, birthDate?: string) => {
+    const nextNurses = nurses.map((nurse) =>
+      nurse.id === nurseId
+        ? { ...nurse, birthDate: birthDate || undefined }
+        : nurse
+    );
+    await persistNurseChanges(nextNurses, 'Birthday updated.');
+  };
+
   const handleTeamCardClick = (teamId: number) => {
     setSelectedTeamFilter(teamId);
     setView('staff');
@@ -1390,6 +1399,21 @@ export default function App() {
                                       <option value={3}>Team 4</option>
                                       <option value={4}>Team 5</option>
                                     </select>
+                                  </div>
+                                  <div className="mt-3">
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">
+                                      {t.birthday}
+                                    </label>
+                                    <input
+                                      type="date"
+                                      value={nurse.birthDate || ''}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        void updateNurseBirthDate(nurse.id, e.target.value);
+                                      }}
+                                      className="px-3 py-2 rounded-xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-100 transition-all text-xs font-medium text-gray-600"
+                                    />
                                   </div>
                                 </div>
                               </div>
