@@ -47,6 +47,7 @@ import { Nurse, NurseRoster, ShiftType } from './types';
 import { SHIFT_COLORS, SHIFT_LABELS, SHIFT_HOURS } from './constants';
 import { generateMonthlyRoster, getShiftForDate, isBirthdayForDate } from './lib/roster-logic';
 import { TRANSLATIONS, Language } from './lib/translations';
+import { importRosterWorkbook } from './lib/excel-import';
 import {
   clearSupabaseBrowserConfig,
   getSupabaseConnectionSummary,
@@ -270,6 +271,7 @@ export default function App() {
   const loadedMonthRef = useRef<string | null>(null);
   const realtimeRefreshTimerRef = useRef<number | null>(null);
   const rosterScrollRef = useRef<HTMLDivElement | null>(null);
+  const importFileInputRef = useRef<HTMLInputElement | null>(null);
   const rosterDragStateRef = useRef({
     isDragging: false,
     isPointerDown: false,
@@ -817,6 +819,59 @@ export default function App() {
     XLSX.writeFile(workbook, fileName);
   };
 
+  const handleImportExcelClick = () => {
+    importFileInputRef.current?.click();
+  };
+
+  const handleImportExcelChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      setIsSyncing(true);
+      setSyncStatus(`Importing ${file.name}...`);
+
+      const fileBuffer = await file.arrayBuffer();
+      const imported = importRosterWorkbook(fileBuffer, currentDate);
+      const importDate = imported.date;
+      const importedRoster = generateMonthlyRoster(
+        imported.nurses.filter((nurse) => !nurse.archived),
+        importDate.getFullYear(),
+        importDate.getMonth()
+      );
+
+      setNurses(imported.nurses);
+      setCurrentDate(importDate);
+      setView('roster');
+      setSelectedNurseId(null);
+      setSearchQuery('');
+      setRoleFilter('all');
+      setGroupFilter('all');
+      loadedMonthRef.current = format(importDate, 'yyyy-MM');
+
+      const warningSuffix = imported.warnings.length
+        ? ` ${imported.warnings.length} leave note(s) were imported as vacation-style leave.`
+        : '';
+
+      if (getSupabaseConnectionSummary().configured) {
+        const result = await saveToSupabase(importDate, imported.nurses, importedRoster);
+        setSyncStatus(
+          `Imported ${imported.nurses.length} staff from ${file.name} and saved ${result.assignmentCount} assignments for ${result.monthKey}.${warningSuffix}`
+        );
+      } else {
+        setSyncStatus(`Imported ${imported.nurses.length} staff from ${file.name} locally.${warningSuffix}`);
+      }
+    } catch (error) {
+      setSyncStatus(`Excel import failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const setManualShift = (nurseId: string, date: string, shift: ShiftType | null) => {
     if (!isAdminMode && startOfDay(parseISO(date)) < today) {
       setSyncStatus('Past dates are locked. Enable admin mode to edit past days.');
@@ -909,6 +964,13 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
+            <input
+              ref={importFileInputRef}
+              type="file"
+              accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="hidden"
+              onChange={handleImportExcelChange}
+            />
             {/* Language Toggle (Mobile Friendly) */}
             <div className="flex bg-blue-50 p-1 rounded-lg gap-1 border border-blue-100 mr-2 shadow-sm">
               <button 
@@ -975,6 +1037,20 @@ export default function App() {
             >
               <Check size={16} />
               {isHydrating ? 'Loading...' : isSyncing ? 'Syncing...' : 'Connect'}
+            </button>
+
+            <button
+              onClick={handleImportExcelClick}
+              disabled={isHydrating || isSyncing}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm border",
+                isHydrating || isSyncing
+                  ? "bg-gray-50 text-gray-400 border-gray-100"
+                  : "bg-white text-emerald-700 border-gray-200 hover:bg-gray-50"
+              )}
+            >
+              <FileSpreadsheet size={16} />
+              Import Excel
             </button>
 
             <button 
