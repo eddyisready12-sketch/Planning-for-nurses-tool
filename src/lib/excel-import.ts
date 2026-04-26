@@ -132,8 +132,13 @@ function getSingleShiftCode(value: string): ShiftType | null {
     return null;
   }
 
-  if (normalized === 'D' || normalized === 'GD') {
+  if (normalized === 'GD') {
     return 'GD';
+  }
+
+  // In this workbook, plain "D" is descanso/rest day, not a worked day shift.
+  if (normalized === 'D') {
+    return 'L';
   }
 
   if (normalized === 'N' || normalized === 'GN') {
