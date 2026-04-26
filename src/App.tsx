@@ -431,7 +431,7 @@ export default function App() {
 
   const handleRosterPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement | null;
-    if (target?.closest('button, input, select, textarea, a')) {
+    if (target?.closest('button, input, select, textarea, a, [data-no-drag-scroll="true"]')) {
       return;
     }
 
@@ -953,7 +953,10 @@ export default function App() {
               className="bg-white border border-[#E5E5E1] rounded-2xl shadow-sm overflow-hidden overflow-x-auto relative cursor-grab active:cursor-grabbing"
             >
               <table className="w-full border-collapse table-fixed min-w-[2000px]">
-                <thead className="bg-[#F9F9F8] border-b-2 border-[#141414] sticky top-0 z-30 shadow-sm">
+                <thead
+                  data-no-drag-scroll="true"
+                  className="bg-[#F9F9F8] border-b-2 border-[#141414] sticky top-0 z-30 shadow-sm"
+                >
                   <tr>
                     <th className="sticky left-0 top-0 z-40 w-64 bg-[#F9F9F8] p-4 text-left font-mono text-[11px] uppercase tracking-wider text-gray-500 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                       Staff Name
@@ -989,10 +992,14 @@ export default function App() {
                       {/* Group Header Row */}
                       <tr className="bg-gray-50/80 border-y border-[#E5E5E1] backdrop-blur-sm">
                         <td 
+                          data-no-drag-scroll="true"
                           colSpan={daysInMonth.length + 9} 
                           className="p-0 border-r border-[#E5E5E1]"
                         >
-                          <div className="sticky left-0 z-10 flex items-center gap-4 px-4 py-3">
+                          <div
+                            data-no-drag-scroll="true"
+                            className="sticky left-0 z-10 flex items-center gap-4 px-4 py-3"
+                          >
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 bg-white/50 px-2 py-1 rounded border border-gray-100 shadow-sm">
                               {t.groupLabels[groupId as keyof typeof t.groupLabels] || groupId}
                             </span>
