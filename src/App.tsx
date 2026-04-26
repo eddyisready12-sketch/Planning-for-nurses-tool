@@ -1298,6 +1298,37 @@ export default function App() {
                           </div>
                         </td>
                       </tr>
+                      <tr className="bg-[#FCFCFB] border-b border-[#E5E5E1]">
+                        <td className="sticky left-0 z-20 bg-[#FCFCFB] p-2 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
+                          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                            Dates
+                          </div>
+                        </td>
+                        {daysInMonth.map((day) => (
+                          <td
+                            key={`${groupId}-${day.toISOString()}`}
+                            className={cn(
+                              "p-1 border-r border-[#E5E5E1] text-center bg-[#FCFCFB]",
+                              format(day, 'EEEEEE') === 'Su' ? "bg-red-50/20" : ""
+                            )}
+                          >
+                            <div className="text-[9px] text-gray-400 uppercase font-black leading-none">
+                              {format(day, 'EEE')}
+                            </div>
+                            <div className="text-[10px] font-mono font-bold text-gray-700 mt-1 leading-none">
+                              {format(day, 'd')}
+                            </div>
+                          </td>
+                        ))}
+                        <td className="p-1 text-center text-[9px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">GD</td>
+                        <td className="p-1 text-center text-[9px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">GN</td>
+                        <td className="p-1 text-center text-[9px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">M</td>
+                        <td className="p-1 text-center text-[9px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">T</td>
+                        <td className="p-1 text-center text-[8px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">Sun. Night</td>
+                        <td className="p-1 text-center text-[8px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">Hol. Night</td>
+                        <td className="p-1 text-center text-[8px] font-black uppercase text-gray-400 border-r border-[#E5E5E1] bg-[#FCFCFB]">Sun. Day</td>
+                        <td className="p-1 text-center text-[9px] font-black uppercase text-blue-500 bg-blue-50/30">Total</td>
+                      </tr>
                       {groupRows.map((row) => (
                         <tr 
                           key={row.nurse.id} 
