@@ -1,4 +1,4 @@
-import { eachDayOfInterval, endOfYear, format, parseISO, startOfYear } from 'date-fns';
+import { addDays, eachDayOfInterval, endOfYear, format, parseISO, startOfYear } from 'date-fns';
 import { createClient, type RealtimeChannel } from '@supabase/supabase-js';
 import { Nurse, NurseRoster, ShiftType, StaffGroupId } from '../types';
 import { SHIFT_HOURS, STAFF_GROUP_LABELS } from '../constants';
@@ -295,6 +295,40 @@ function appendVacationRange(nurse: Nurse, start: string, end: string) {
   }
 }
 
+function normalizeVacationRanges(ranges: Nurse['vacations']) {
+  if (!ranges.length) {
+    return [];
+  }
+
+  const sortedRanges = [...ranges].sort((a, b) => a.start.localeCompare(b.start));
+  const normalized: Nurse['vacations'] = [];
+
+  sortedRanges.forEach((range) => {
+    const currentStart = parseISO(range.start);
+    const currentEnd = parseISO(range.end);
+    const previous = normalized[normalized.length - 1];
+
+    if (!previous) {
+      normalized.push({ start: range.start, end: range.end });
+      return;
+    }
+
+    const previousEnd = parseISO(previous.end);
+    const previousEndPlusOne = addDays(previousEnd, 1);
+
+    if (currentStart <= previousEndPlusOne) {
+      if (currentEnd > previousEnd) {
+        previous.end = range.end;
+      }
+      return;
+    }
+
+    normalized.push({ start: range.start, end: range.end });
+  });
+
+  return normalized;
+}
+
 function buildVacationBalanceRows(currentDate: Date, nurses: Nurse[], pageSlug: string) {
   const yearStart = startOfYear(currentDate);
   const yearEnd = endOfYear(currentDate);
@@ -470,6 +504,10 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
     nurse.overrides[entry.work_date] = mappedShift;
   });
 
+  nurses.forEach((nurse) => {
+    nurse.vacations = normalizeVacationRanges(nurse.vacations);
+  });
+
   return {
     configured: true,
     nurses,
@@ -532,7 +570,14 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
   }>();
 
   nurses.forEach((nurse) => {
-    nurse.vacations.forEach((range) => {
+    const normalizedVacationRanges = normalizeVacationRanges([
+      ...nurse.vacations,
+      ...Object.entries(nurse.overrides || {})
+        .filter(([, shift]) => shift === 'V')
+        .map(([date]) => ({ start: date, end: date })),
+    ]);
+
+    normalizedVacationRanges.forEach((range) => {
       const row = {
         page_slug: pageSlug,
         staff_name: nurse.name,
@@ -544,11 +589,11 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
     });
 
     Object.entries(nurse.overrides || {}).forEach(([date, shift]) => {
-      if (shift === 'V' || shift === 'O') {
+      if (shift === 'O') {
         const row = {
           page_slug: pageSlug,
           staff_name: nurse.name,
-          leave_code: shift === 'V' ? 'VAC' : 'O',
+          leave_code: 'O',
           start_date: date,
           end_date: date,
         };
