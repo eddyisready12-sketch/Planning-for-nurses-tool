@@ -17,6 +17,12 @@ export function getShiftForDate(nurse: Nurse, date: Date): ShiftType {
     return nurse.overrides[dateStr];
   }
 
+  // When a month has been loaded from Supabase, the saved assignment for that
+  // exact date should win over derived vacation/rotation logic.
+  if (nurse.loadedMonthAssignments && nurse.loadedMonthAssignments[dateStr]) {
+    return nurse.loadedMonthAssignments[dateStr];
+  }
+
   // Check if date is in vacation
   for (const range of nurse.vacations) {
     const start = parseISO(range.start);
@@ -24,12 +30,6 @@ export function getShiftForDate(nurse: Nurse, date: Date): ShiftType {
     if (isWithinInterval(date, { start, end })) {
       return 'V';
     }
-  }
-
-  // When a month is loaded from Supabase, use the saved assignment for that date
-  // so the UI reflects the imported/saved roster exactly.
-  if (nurse.loadedMonthAssignments && nurse.loadedMonthAssignments[dateStr]) {
-    return nurse.loadedMonthAssignments[dateStr];
   }
 
   // Calculate day in rotation

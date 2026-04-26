@@ -511,24 +511,11 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
 
     if (mappedShift === 'V') {
       appendVacationRange(nurse, entry.work_date, entry.work_date);
-      return;
-    }
-
-    const entryDate = parseISO(entry.work_date);
-    const inVacation = nurse.vacations.some((range) => {
-      const start = parseISO(range.start);
-      const end = parseISO(range.end);
-      return entryDate >= start && entryDate <= end;
-    });
-
-    if (inVacation) {
-      return;
     }
 
     if (mappedShift === 'O' || mappedShift === 'LIC') {
       nurse.overrides = nurse.overrides || {};
       nurse.overrides[entry.work_date] = mappedShift;
-      return;
     }
 
     nurse.loadedMonthAssignments = nurse.loadedMonthAssignments || {};
