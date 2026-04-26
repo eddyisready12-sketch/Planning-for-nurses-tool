@@ -103,6 +103,18 @@ function getShiftBadgeClasses(shift: ShiftType) {
 function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false) {
   const label = getShiftDisplayLabel(shift);
 
+  const birthdayBadge = birthday ? (
+    <>
+      <div className="absolute right-1 top-1 h-3.5 w-3.5 rounded-full bg-amber-200 ring-1 ring-white pointer-events-none" />
+      <div className={cn(
+        "absolute right-[6px] top-[2px] font-black text-amber-700 pointer-events-none leading-none",
+        compact ? "text-[8px]" : "text-[7px]"
+      )}>
+        O
+      </div>
+    </>
+  ) : null;
+
   if (shift === 'MT') {
     return (
       <div className={cn(
@@ -123,18 +135,7 @@ function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false)
         )}>
           T
         </div>
-        {birthday && (
-          <>
-            <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(135deg,transparent_48%,rgba(255,255,255,0.95)_49%,rgba(255,255,255,0.95)_51%,transparent_52%)]" />
-            <div className="absolute right-0 top-0 h-0 w-0 pointer-events-none border-l-[16px] border-l-transparent border-t-[16px] border-t-amber-200" />
-            <div className={cn(
-              "absolute right-1 top-0.5 font-black text-amber-700 pointer-events-none",
-              compact ? "text-[9px]" : "text-[8px]"
-            )}>
-              O
-            </div>
-          </>
-        )}
+        {birthdayBadge}
       </div>
     );
   }
@@ -146,20 +147,13 @@ function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false)
         compact ? "inline-flex min-w-[44px] px-3 py-2" : "w-full h-8",
         getShiftBadgeClasses(shift)
       )}>
-        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(135deg,transparent_48%,rgba(255,255,255,0.95)_49%,rgba(255,255,255,0.95)_51%,transparent_52%)]" />
         <div className={cn(
-          "absolute left-1 font-black pointer-events-none",
-          compact ? "bottom-1 text-[11px]" : "bottom-0.5 text-[10px]"
+          "absolute inset-0 flex items-center justify-center font-black pointer-events-none",
+          compact ? "text-xs" : "text-[10px]"
         )}>
           {label}
         </div>
-        <div className="absolute right-0 top-0 h-0 w-0 pointer-events-none border-l-[16px] border-l-transparent border-t-[16px] border-t-amber-200" />
-        <div className={cn(
-          "absolute right-1 top-0.5 font-black text-amber-700 pointer-events-none",
-          compact ? "text-[9px]" : "text-[8px]"
-        )}>
-          O
-        </div>
+        {birthdayBadge}
       </div>
     );
   }
