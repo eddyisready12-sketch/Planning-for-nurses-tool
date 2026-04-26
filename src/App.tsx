@@ -5,8 +5,10 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { 
+  addDays,
   format, 
   addMonths, 
+  subDays,
   subMonths, 
   startOfMonth, 
   endOfMonth, 
@@ -61,6 +63,36 @@ const ADMIN_MODE_STORAGE_KEY = 'hospithro.admin-mode';
 
 function formatVacationDays(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function removeDateFromVacationRanges(ranges: Nurse['vacations'], targetDate: string) {
+  const target = parseISO(targetDate);
+
+  return ranges.flatMap((range) => {
+    const start = parseISO(range.start);
+    const end = parseISO(range.end);
+
+    if (target < start || target > end) {
+      return [range];
+    }
+
+    if (range.start === targetDate && range.end === targetDate) {
+      return [];
+    }
+
+    if (range.start === targetDate) {
+      return [{ start: format(addDays(target, 1), 'yyyy-MM-dd'), end: range.end }];
+    }
+
+    if (range.end === targetDate) {
+      return [{ start: range.start, end: format(subDays(target, 1), 'yyyy-MM-dd') }];
+    }
+
+    return [
+      { start: range.start, end: format(subDays(target, 1), 'yyyy-MM-dd') },
+      { start: format(addDays(target, 1), 'yyyy-MM-dd'), end: range.end },
+    ];
+  });
 }
 
 export default function App() {
@@ -567,12 +599,18 @@ export default function App() {
     setNurses(nurses.map(n => {
       if (n.id === nurseId) {
         const newOverrides = { ...(n.overrides || {}) };
+        let newVacations = n.vacations;
+
+        if (shift === null || shift !== 'V') {
+          newVacations = removeDateFromVacationRanges(n.vacations, date);
+        }
+
         if (shift === null) {
           delete newOverrides[date];
         } else {
           newOverrides[date] = shift;
         }
-        return { ...n, overrides: newOverrides };
+        return { ...n, vacations: newVacations, overrides: newOverrides };
       }
       return n;
     }));
