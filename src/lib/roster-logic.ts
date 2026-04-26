@@ -13,13 +13,13 @@ export function getShiftForDate(nurse: Nurse, date: Date): ShiftType {
   const dateStr = format(date, 'yyyy-MM-dd');
   
   // Check for manual overrides first
-  if (nurse.overrides && nurse.overrides[dateStr]) {
+  if (nurse.overrides && dateStr in nurse.overrides) {
     return nurse.overrides[dateStr];
   }
 
   // When a month has been loaded from Supabase, the saved assignment for that
   // exact date should win over derived vacation/rotation logic.
-  if (nurse.loadedMonthAssignments && nurse.loadedMonthAssignments[dateStr]) {
+  if (nurse.loadedMonthAssignments && dateStr in nurse.loadedMonthAssignments) {
     return nurse.loadedMonthAssignments[dateStr];
   }
 
