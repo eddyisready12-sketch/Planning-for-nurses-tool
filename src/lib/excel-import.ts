@@ -126,7 +126,10 @@ function mapSectionToGroup(
   return { nextDiscipline: currentDiscipline };
 }
 
-function getSingleShiftCode(value: string): ShiftType | null {
+function getSingleShiftCode(
+  value: string,
+  context: { discipline: 'LIC' | 'TEC'; groupId: StaffGroupId }
+): ShiftType | null {
   const normalized = normalizeText(value);
   if (!normalized) {
     return null;
@@ -136,8 +139,17 @@ function getSingleShiftCode(value: string): ShiftType | null {
     return 'GD';
   }
 
-  // In this workbook, plain "D" is descanso/rest day, not a worked day shift.
   if (normalized === 'D') {
+    if (
+      context.discipline === 'TEC' ||
+      context.groupId === 'TEC_NOMBRADOS' ||
+      context.groupId === 'TEC_CAS' ||
+      context.groupId === 'DESTACADO'
+    ) {
+      return 'GD';
+    }
+
+    // In the nursing sections of this workbook, plain D is used as descanso/rest.
     return 'L';
   }
 
@@ -164,9 +176,13 @@ function getSingleShiftCode(value: string): ShiftType | null {
   return null;
 }
 
-function combineShiftCodes(topValue: string, bottomValue: string): ShiftType | null {
-  const topShift = getSingleShiftCode(topValue);
-  const bottomShift = getSingleShiftCode(bottomValue);
+function combineShiftCodes(
+  topValue: string,
+  bottomValue: string,
+  context: { discipline: 'LIC' | 'TEC'; groupId: StaffGroupId }
+): ShiftType | null {
+  const topShift = getSingleShiftCode(topValue, context);
+  const bottomShift = getSingleShiftCode(bottomValue, context);
 
   if (!topShift && !bottomShift) {
     return null;
@@ -326,7 +342,7 @@ export function importRosterWorkbook(fileBuffer: ArrayBuffer, fallbackDate: Date
 
       const topValue = String(row[day] ?? '').trim();
       const bottomValue = String(nextRow[day] ?? '').trim();
-      const parsedShift = combineShiftCodes(topValue, bottomValue) || 'L';
+      const parsedShift = combineShiftCodes(topValue, bottomValue, { discipline: currentDiscipline, groupId }) || 'L';
       nurse.overrides![format(new Date(importDate.getFullYear(), importDate.getMonth(), day), 'yyyy-MM-dd')] = parsedShift;
     }
 
