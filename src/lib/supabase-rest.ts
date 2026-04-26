@@ -556,7 +556,7 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
     const mappedShift = DB_TO_UI_SHIFT[normalizedShiftCode];
     const localWorkDate = normalizeDbDateToLocalDate(entry.work_date);
     if (!nurse || !mappedShift) {
-      console.warn('[Hospithro] Skipped assignment row:', entry.staff_name, entry.shift_code);
+      console.warn('[Hospithro] Skipped:', entry.staff_name, '| shift:', entry.shift_code, '| mapped:', mappedShift);
       return;
     }
 
