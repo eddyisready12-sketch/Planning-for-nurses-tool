@@ -103,18 +103,6 @@ function getShiftBadgeClasses(shift: ShiftType) {
 function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false) {
   const label = getShiftDisplayLabel(shift);
 
-  const birthdayBadge = birthday ? (
-    <>
-      <div className="absolute right-1 top-1 h-3.5 w-3.5 rounded-full bg-amber-200 ring-1 ring-white pointer-events-none" />
-      <div className={cn(
-        "absolute right-[6px] top-[2px] font-black text-amber-700 pointer-events-none leading-none",
-        compact ? "text-[8px]" : "text-[7px]"
-      )}>
-        O
-      </div>
-    </>
-  ) : null;
-
   if (shift === 'MT') {
     return (
       <div className={cn(
@@ -135,7 +123,6 @@ function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false)
         )}>
           T
         </div>
-        {birthdayBadge}
       </div>
     );
   }
@@ -143,17 +130,30 @@ function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false)
   if (birthday && isWorkShift(shift)) {
     return (
       <div className={cn(
-        "relative overflow-hidden rounded-md pointer-events-none",
-        compact ? "inline-flex min-w-[44px] px-3 py-2" : "w-full h-8",
-        getShiftBadgeClasses(shift)
+        "grid overflow-hidden rounded-md pointer-events-none border",
+        compact ? "inline-grid min-w-[44px] grid-rows-2" : "grid h-8 w-full grid-rows-2",
+        shift === 'GD' && "border-blue-200",
+        shift === 'GN' && "border-indigo-950",
+        shift === 'M' && "border-teal-100",
+        shift === 'T' && "border-orange-100"
       )}>
         <div className={cn(
-          "absolute inset-0 flex items-center justify-center font-black pointer-events-none",
-          compact ? "text-xs" : "text-[10px]"
+          "flex items-center justify-center font-black pointer-events-none border-b",
+          compact ? "px-3 py-1 text-[10px]" : "text-[10px]",
+          shift === 'GD' && "bg-blue-100 text-blue-700 border-blue-200",
+          shift === 'GN' && "bg-indigo-900 text-white border-indigo-950",
+          shift === 'M' && "bg-teal-50 text-teal-700 border-teal-100",
+          shift === 'T' && "bg-orange-50 text-orange-700 border-orange-100"
         )}>
           {label}
         </div>
-        {birthdayBadge}
+        <div className={cn(
+          "flex items-center justify-center font-black pointer-events-none",
+          compact ? "px-3 py-1 text-[10px]" : "text-[10px]",
+          "bg-amber-100 text-amber-700"
+        )}>
+          O
+        </div>
       </div>
     );
   }
