@@ -154,6 +154,12 @@ export default function App() {
 
   const loadedMonthRef = useRef<string | null>(null);
   const realtimeRefreshTimerRef = useRef<number | null>(null);
+  const rosterScrollRef = useRef<HTMLDivElement | null>(null);
+  const rosterDragStateRef = useRef({
+    isDragging: false,
+    startX: 0,
+    startScrollLeft: 0,
+  });
 
   useEffect(() => {
     const config = getSupabaseConnectionSummary();
@@ -422,6 +428,53 @@ export default function App() {
 
   const handlePrevMonth = () => setCurrentDate(prev => subMonths(prev, 1));
   const handleNextMonth = () => setCurrentDate(prev => addMonths(prev, 1));
+
+  const handleRosterPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button, input, select, textarea, a')) {
+      return;
+    }
+
+    const container = rosterScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    rosterDragStateRef.current = {
+      isDragging: true,
+      startX: event.clientX,
+      startScrollLeft: container.scrollLeft,
+    };
+
+    container.setPointerCapture(event.pointerId);
+    container.style.cursor = 'grabbing';
+    container.style.userSelect = 'none';
+  };
+
+  const handleRosterPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const container = rosterScrollRef.current;
+    const dragState = rosterDragStateRef.current;
+    if (!container || !dragState.isDragging) {
+      return;
+    }
+
+    const deltaX = event.clientX - dragState.startX;
+    container.scrollLeft = dragState.startScrollLeft - deltaX;
+  };
+
+  const handleRosterPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    const container = rosterScrollRef.current;
+    if (!container || !rosterDragStateRef.current.isDragging) {
+      return;
+    }
+
+    rosterDragStateRef.current.isDragging = false;
+    if (container.hasPointerCapture(event.pointerId)) {
+      container.releasePointerCapture(event.pointerId);
+    }
+    container.style.cursor = 'grab';
+    container.style.userSelect = '';
+  };
 
   const handleSyncSupabase = async () => {
     try {
@@ -890,7 +943,15 @@ export default function App() {
             </div>
 
             {/* Roster Grid Container */}
-            <div className="bg-white border border-[#E5E5E1] rounded-2xl shadow-sm overflow-hidden overflow-x-auto relative">
+            <div
+              ref={rosterScrollRef}
+              onPointerDown={handleRosterPointerDown}
+              onPointerMove={handleRosterPointerMove}
+              onPointerUp={handleRosterPointerUp}
+              onPointerCancel={handleRosterPointerUp}
+              onPointerLeave={handleRosterPointerUp}
+              className="bg-white border border-[#E5E5E1] rounded-2xl shadow-sm overflow-hidden overflow-x-auto relative cursor-grab active:cursor-grabbing"
+            >
               <table className="w-full border-collapse table-fixed min-w-[2000px]">
                 <thead className="bg-[#F9F9F8] border-b-2 border-[#141414] sticky top-0 z-30 shadow-sm">
                   <tr>
