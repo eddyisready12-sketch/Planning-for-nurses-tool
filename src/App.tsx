@@ -30,6 +30,7 @@ import {
   Trash2,
   UserPlus,
   Stethoscope,
+  RotateCcw,
   Info,
   Search,
   Filter,
@@ -127,9 +128,19 @@ export default function App() {
     end: endOfMonth(currentDate)
   });
 
+  const activeNurses = useMemo(
+    () => nurses.filter((nurse) => !nurse.archived),
+    [nurses]
+  );
+
+  const archivedNurses = useMemo(
+    () => nurses.filter((nurse) => nurse.archived),
+    [nurses]
+  );
+
   const roster = useMemo(() => {
-    return generateMonthlyRoster(nurses, currentDate.getFullYear(), currentDate.getMonth());
-  }, [nurses, currentDate]);
+    return generateMonthlyRoster(activeNurses, currentDate.getFullYear(), currentDate.getMonth());
+  }, [activeNurses, currentDate]);
 
   const loadedMonthRef = useRef<string | null>(null);
   const realtimeRefreshTimerRef = useRef<number | null>(null);
@@ -378,7 +389,7 @@ export default function App() {
 
   const teamSummaries = useMemo(() => {
     return Array.from({ length: 5 }, (_, index) => {
-      const teamMembers = nurses.filter((nurse) => nurse.teamId === index);
+      const teamMembers = activeNurses.filter((nurse) => nurse.teamId === index);
       const tecCount = teamMembers.filter((nurse) => nurse.role === 'Técnico').length;
       const nurseCount = teamMembers.length - tecCount;
 
@@ -389,15 +400,15 @@ export default function App() {
         tecCount,
       };
     });
-  }, [nurses]);
+  }, [activeNurses]);
 
   const filteredStaffDirectory = useMemo(() => {
-    return nurses.filter((nurse) => {
+    return activeNurses.filter((nurse) => {
       const matchSearch = nurse.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchTeam = selectedTeamFilter === 'all' || nurse.teamId === selectedTeamFilter;
       return matchSearch && matchTeam;
     });
-  }, [nurses, searchQuery, selectedTeamFilter]);
+  }, [activeNurses, searchQuery, selectedTeamFilter]);
 
   const handlePrevMonth = () => setCurrentDate(prev => subMonths(prev, 1));
   const handleNextMonth = () => setCurrentDate(prev => addMonths(prev, 1));
@@ -495,6 +506,7 @@ export default function App() {
       role: formData.get('role') as any,
       groupId: formData.get('groupId') as any,
       teamId: parseInt(formData.get('teamId') as string),
+      archived: false,
       vacations: [],
       hiringDate: '2026-01-01'
     };
@@ -504,12 +516,21 @@ export default function App() {
     await persistNurseChanges(nextNurses, 'Staff member added.');
   };
 
-  const removeNurse = async (id: string) => {
-    const nextNurses = nurses.filter(n => n.id !== id);
+  const archiveNurse = async (id: string) => {
+    const nextNurses = nurses.map((nurse) =>
+      nurse.id === id ? { ...nurse, archived: true } : nurse
+    );
     if (selectedNurseId === id) {
       setSelectedNurseId(null);
     }
-    await persistNurseChanges(nextNurses, 'Staff member removed.');
+    await persistNurseChanges(nextNurses, 'Staff member archived.');
+  };
+
+  const restoreNurse = async (id: string) => {
+    const nextNurses = nurses.map((nurse) =>
+      nurse.id === id ? { ...nurse, archived: false } : nurse
+    );
+    await persistNurseChanges(nextNurses, 'Staff member restored.');
   };
 
   const addVacation = async (nurseId: string, start: string, end: string) => {
@@ -1177,7 +1198,7 @@ export default function App() {
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] text-gray-400 mt-4">{t.totalStaff}: {nurses.length} {t.activeNurses}.</p>
+                <p className="text-[11px] text-gray-400 mt-4">{t.totalStaff}: {activeNurses.length} {t.activeNurses}.</p>
               </div>
 
               <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
@@ -1307,9 +1328,10 @@ export default function App() {
                                 <button 
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    void removeNurse(nurse.id);
+                                    void archiveNurse(nurse.id);
                                   }}
                                   className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                  title="Archive staff member"
                                 >
                                   <Trash2 size={18} />
                                 </button>
@@ -1331,6 +1353,44 @@ export default function App() {
                   </div>
                 );
               })}
+
+              {archivedNurses.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-[0.25em] text-gray-400 flex items-center gap-4 px-2">
+                    Archived staff
+                    <span className="h-px bg-gray-100 flex-1" />
+                    <span className="bg-gray-50 px-2 py-0.5 rounded text-[10px]">{archivedNurses.length}</span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {archivedNurses.map((nurse) => (
+                      <div
+                        key={nurse.id}
+                        className="p-5 bg-gray-50 border border-gray-100 rounded-2xl shadow-sm"
+                      >
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <h4 className="font-bold text-gray-700 leading-tight">{nurse.name}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 bg-white px-1.5 py-0.5 rounded">
+                                {nurse.role}
+                              </span>
+                              <span className="text-[10px] text-gray-400 font-mono">Team {nurse.teamId + 1}</span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void restoreNurse(nurse.id)}
+                            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-gray-200 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+                          >
+                            <RotateCcw size={14} />
+                            Restore
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

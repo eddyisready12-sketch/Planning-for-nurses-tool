@@ -25,6 +25,7 @@ export interface Nurse {
   role: 'Licenciada' | 'Técnico' | 'Supervisora';
   groupId: StaffGroupId;
   teamId: number; // 0-4 for the 5-day cycle
+  archived?: boolean;
   vacations: VacationRange[];
   hiringDate: string; // To calculate the start of their cycle
   overrides?: Record<string, ShiftType>; // Key is ISO date string 'YYYY-MM-DD'

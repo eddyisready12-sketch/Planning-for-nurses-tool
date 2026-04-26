@@ -187,6 +187,7 @@ type StaffMemberRow = {
   group_name: string;
   sort_order: number;
   team_id?: number | null;
+  active?: boolean | null;
 };
 
 type LeaveEntryRow = {
@@ -408,7 +409,7 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
 
   const [staffRows, leaveRows, assignmentRows, planRows] = await Promise.all([
     request<StaffMemberRow[]>(
-      `staff_members?select=full_name,group_name,sort_order,team_id&page_slug=eq.${encodeURIComponent(pageSlug)}&active=eq.true&order=sort_order.asc`
+      `staff_members?select=full_name,group_name,sort_order,team_id,active&page_slug=eq.${encodeURIComponent(pageSlug)}&order=sort_order.asc`
     ),
     request<LeaveEntryRow[]>(
       `leave_entries?select=staff_name,leave_code,start_date,end_date&page_slug=eq.${encodeURIComponent(pageSlug)}&order=start_date.asc`
@@ -438,6 +439,7 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       role: inferRole(groupId, fallback?.role),
       groupId,
       teamId: row.team_id ?? fallback?.teamId ?? (row.sort_order % 5),
+      archived: row.active === false,
       vacations: [],
       hiringDate: fallback?.hiringDate || '2020-01-01',
       overrides: {},
@@ -524,6 +526,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
 
   const monthKey = format(currentDate, 'yyyy-MM');
   const { pageSlug } = getSupabaseConfig();
+  const activeNurses = nurses.filter((nurse) => !nurse.archived);
 
   await request('roster_pages?on_conflict=page_slug', {
     method: 'POST',
@@ -543,7 +546,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
   await request(`leave_entries?page_slug=eq.${encodeURIComponent(pageSlug)}`, { method: 'DELETE' });
   await request(`roster_assignments?page_slug=eq.${encodeURIComponent(pageSlug)}&month_key=eq.${monthKey}`, { method: 'DELETE' });
 
-  const uniqueGroups = Array.from(new Set(nurses.map((nurse) => nurse.groupId)));
+  const uniqueGroups = Array.from(new Set(activeNurses.map((nurse) => nurse.groupId)));
   const groupRows = uniqueGroups.map((groupId, index) => ({
     page_slug: pageSlug,
     name: STAFF_GROUP_LABELS[groupId],
@@ -557,7 +560,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
     full_name: nurse.name,
     sort_order: index,
     team_id: nurse.teamId,
-    active: true,
+    active: !nurse.archived,
   }));
   await insertChunked('staff_members', staffRows);
 
@@ -569,7 +572,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
     end_date: string;
   }>();
 
-  nurses.forEach((nurse) => {
+  activeNurses.forEach((nurse) => {
     const normalizedVacationRanges = normalizeVacationRanges([
       ...nurse.vacations,
       ...Object.entries(nurse.overrides || {})
@@ -652,7 +655,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
   );
   await insertChunked('roster_assignments', assignmentRows);
 
-  const vacationBalanceRows = buildVacationBalanceRows(currentDate, nurses, pageSlug);
+  const vacationBalanceRows = buildVacationBalanceRows(currentDate, activeNurses, pageSlug);
   if (vacationBalanceRows.length) {
     await request('staff_vacation_balances?on_conflict=page_slug,staff_name,vacation_year', {
       method: 'POST',
@@ -665,7 +668,7 @@ export async function saveToSupabase(currentDate: Date, nurses: Nurse[], roster:
 
   return {
     monthKey,
-    staffCount: nurses.length,
+    staffCount: activeNurses.length,
     assignmentCount: assignmentRows.length,
   };
 }
