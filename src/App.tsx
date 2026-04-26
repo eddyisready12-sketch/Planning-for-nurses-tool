@@ -1242,39 +1242,6 @@ export default function App() {
                 className="overflow-x-auto overflow-y-visible relative cursor-grab active:cursor-grabbing rounded-2xl"
               >
                 <table className="w-full border-collapse table-fixed min-w-[2000px]">
-                <thead
-                  data-no-drag-scroll="true"
-                  className="bg-[#F9F9F8] border-b-2 border-[#141414] sticky top-0 z-30 shadow-sm"
-                >
-                  <tr>
-                    <th className="sticky left-0 top-0 z-40 w-64 bg-[#F9F9F8] p-4 text-left font-mono text-[11px] uppercase tracking-wider text-gray-500 border-r border-[#E5E5E1] shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                      Staff Name
-                    </th>
-                    {daysInMonth.map(day => (
-                      <th key={day.toISOString()} className={cn(
-                        "w-12 p-2 text-center border-r border-[#E5E5E1]",
-                        format(day, 'EEEEEE') === 'Su' ? "bg-red-50/30" : ""
-                      )}>
-                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">
-                          {format(day, 'EEE')}
-                        </div>
-                        <div className="text-sm font-mono font-medium">
-                          {format(day, 'd')}
-                        </div>
-                      </th>
-                    ))}
-                    <th className="w-12 p-2 text-center text-[10px] uppercase font-black text-gray-600 border-r border-[#E5E5E1]">GD</th>
-                    <th className="w-12 p-2 text-center text-[10px] uppercase font-black text-gray-600 border-r border-[#E5E5E1]">GN</th>
-                    <th className="w-12 p-2 text-center text-[10px] uppercase font-black text-gray-600 border-r border-[#E5E5E1]">M</th>
-                    <th className="w-12 p-2 text-center text-[10px] uppercase font-black text-gray-600 border-r border-[#E5E5E1]">T</th>
-                    <th className="w-16 p-1 text-center text-[9px] leading-tight uppercase font-black text-gray-600 border-r border-[#E5E5E1]">{t.sunNight}</th>
-                    <th className="w-16 p-1 text-center text-[9px] leading-tight uppercase font-black text-gray-600 border-r border-[#E5E5E1]">{t.holidayNight}</th>
-                    <th className="w-16 p-1 text-center text-[9px] leading-tight uppercase font-black text-gray-600 border-r border-[#E5E5E1]">{t.sunDay}</th>
-                    <th className="w-20 p-2 text-center text-[10px] uppercase font-bold text-blue-600 bg-blue-50/50">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
                 <tbody className="divide-y divide-[#E5E5E1]">
                   {(Object.entries(groupedRoster) as [string, NurseRoster[]][]).map(([groupId, groupRows]) => (
                     <React.Fragment key={groupId}>
