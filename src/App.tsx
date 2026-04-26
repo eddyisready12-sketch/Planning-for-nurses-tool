@@ -47,7 +47,7 @@ import { Nurse, NurseRoster, ShiftType } from './types';
 import { SHIFT_COLORS, SHIFT_LABELS, SHIFT_HOURS } from './constants';
 import { generateMonthlyRoster, getShiftForDate, isBirthdayForDate } from './lib/roster-logic';
 import { TRANSLATIONS, Language } from './lib/translations';
-import { importRosterWorkbook } from './lib/excel-import';
+import { importRosterWorkbook, type ExcelImportResult } from './lib/excel-import';
 import {
   clearSupabaseBrowserConfig,
   getSupabaseConnectionSummary,
@@ -223,6 +223,7 @@ export default function App() {
   const [lang, setLang] = useState<Language>('en');
   const [showInfo, setShowInfo] = useState(false);
   const [showSupabaseSettings, setShowSupabaseSettings] = useState(false);
+  const [pendingImport, setPendingImport] = useState<{ fileName: string; result: ExcelImportResult } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEditCell, setActiveEditCell] = useState<{ nurseId: string, date: string, x: number, y: number } | null>(null);
   const [selectedNurseId, setSelectedNurseId] = useState<string | null>(null);
@@ -258,6 +259,15 @@ export default function App() {
     () => nurses.filter((nurse) => !nurse.archived),
     [nurses]
   );
+
+  const normalizeImportName = useCallback((value: string) => {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/\blic\.\s*/g, '')
+      .replace(/\btec\.\s*/g, '')
+      .replace(/\s+/g, ' ');
+  }, []);
 
   const archivedNurses = useMemo(
     () => nurses.filter((nurse) => nurse.archived),
@@ -832,19 +842,48 @@ export default function App() {
     }
 
     try {
-      setIsSyncing(true);
       setSyncStatus(`Importing ${file.name}...`);
 
       const fileBuffer = await file.arrayBuffer();
       const imported = importRosterWorkbook(fileBuffer, currentDate);
-      const importDate = imported.date;
-      const importedRoster = generateMonthlyRoster(
-        imported.nurses.filter((nurse) => !nurse.archived),
+      setPendingImport({ fileName: file.name, result: imported });
+      setSyncStatus(
+        `Parsed ${imported.nurses.length} staff from ${file.name}. Choose Replace or Merge to continue.`
+      );
+    } catch (error) {
+      setSyncStatus(`Excel import failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleConfirmImport = async (mode: 'replace' | 'merge') => {
+    if (!pendingImport) {
+      return;
+    }
+
+    try {
+      setIsSyncing(true);
+      const importDate = pendingImport.result.date;
+      const importedNurses = pendingImport.result.nurses;
+      const nextNurses =
+        mode === 'replace'
+          ? importedNurses
+          : (() => {
+              const importedByName = new Map(
+                importedNurses.map((nurse) => [normalizeImportName(nurse.name), nurse])
+              );
+              const preservedExisting = nurses.filter(
+                (nurse) => !importedByName.has(normalizeImportName(nurse.name))
+              );
+              return [...preservedExisting, ...importedNurses];
+            })();
+
+      const nextRoster = generateMonthlyRoster(
+        nextNurses.filter((nurse) => !nurse.archived),
         importDate.getFullYear(),
         importDate.getMonth()
       );
 
-      setNurses(imported.nurses);
+      setNurses(nextNurses);
       setCurrentDate(importDate);
       setView('roster');
       setSelectedNurseId(null);
@@ -853,18 +892,22 @@ export default function App() {
       setGroupFilter('all');
       loadedMonthRef.current = format(importDate, 'yyyy-MM');
 
-      const warningSuffix = imported.warnings.length
-        ? ` ${imported.warnings.length} leave note(s) were imported as vacation-style leave.`
+      const warningSuffix = pendingImport.result.warnings.length
+        ? ` ${pendingImport.result.warnings.length} leave note(s) were imported as vacation-style leave.`
         : '';
 
       if (getSupabaseConnectionSummary().configured) {
-        const result = await saveToSupabase(importDate, imported.nurses, importedRoster);
+        const result = await saveToSupabase(importDate, nextNurses, nextRoster);
         setSyncStatus(
-          `Imported ${imported.nurses.length} staff from ${file.name} and saved ${result.assignmentCount} assignments for ${result.monthKey}.${warningSuffix}`
+          `${mode === 'replace' ? 'Replaced' : 'Merged'} ${pendingImport.result.nurses.length} imported staff from ${pendingImport.fileName} and saved ${result.assignmentCount} assignments for ${result.monthKey}.${warningSuffix}`
         );
       } else {
-        setSyncStatus(`Imported ${imported.nurses.length} staff from ${file.name} locally.${warningSuffix}`);
+        setSyncStatus(
+          `${mode === 'replace' ? 'Replaced' : 'Merged'} ${pendingImport.result.nurses.length} imported staff from ${pendingImport.fileName} locally.${warningSuffix}`
+        );
       }
+
+      setPendingImport(null);
     } catch (error) {
       setSyncStatus(`Excel import failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
@@ -1844,6 +1887,85 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {pendingImport && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden"
+          >
+            <div className="p-8 border-b border-gray-100 bg-gray-50/50">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-2xl font-bold tracking-tight">Import Excel roster</h3>
+                  <p className="text-sm text-gray-500 mt-2">
+                    {pendingImport.fileName} • {format(pendingImport.result.date, 'MMMM yyyy')}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setPendingImport(null)}
+                  className="p-2 hover:bg-white rounded-full transition-colors text-gray-400"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-5">
+                  <div className="text-[11px] uppercase tracking-[0.25em] font-black text-gray-400">Month</div>
+                  <div className="mt-2 text-2xl font-bold">{format(pendingImport.result.date, 'MMMM yyyy')}</div>
+                </div>
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-5">
+                  <div className="text-[11px] uppercase tracking-[0.25em] font-black text-gray-400">Staff found</div>
+                  <div className="mt-2 text-2xl font-bold">{pendingImport.result.nurses.length}</div>
+                </div>
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-5">
+                  <div className="text-[11px] uppercase tracking-[0.25em] font-black text-gray-400">Warnings</div>
+                  <div className="mt-2 text-2xl font-bold">{pendingImport.result.warnings.length}</div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5 text-sm text-amber-900 space-y-2">
+                <div className="font-semibold">Choose how to import this workbook</div>
+                <div>`Replace` overwrites the current page data with the Excel file.</div>
+                <div>`Merge` keeps staff not present in the Excel file and replaces matching names from the workbook.</div>
+              </div>
+
+              {pendingImport.result.warnings.length > 0 && (
+                <div className="rounded-2xl border border-rose-100 bg-rose-50 p-5 text-sm text-rose-900 space-y-2 max-h-40 overflow-auto">
+                  {pendingImport.result.warnings.map((warning, index) => (
+                    <div key={`${warning}-${index}`}>{warning}</div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-end">
+                <button
+                  onClick={() => setPendingImport(null)}
+                  className="px-5 py-3 rounded-2xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => void handleConfirmImport('merge')}
+                  className="px-5 py-3 rounded-2xl text-sm font-semibold border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                  Merge
+                </button>
+                <button
+                  onClick={() => void handleConfirmImport('replace')}
+                  className="px-5 py-3 rounded-2xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200"
+                >
+                  Replace
+                </button>
+              </div>
+            </div>
           </motion.div>
         </div>
       )}
