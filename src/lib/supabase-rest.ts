@@ -506,6 +506,7 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
   });
 
   const nurseByName = new Map(nurses.map((nurse) => [normalizeName(nurse.name), nurse]));
+  console.log('[Hospithro] Staff names in map:', Array.from(nurseByName.keys()));
 
   // Also create nurse stubs from assignment rows not matched to staff_members
   assignmentRows.forEach((entry) => {
@@ -556,7 +557,9 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
     const mappedShift = DB_TO_UI_SHIFT[normalizedShiftCode];
     const localWorkDate = normalizeDbDateToLocalDate(entry.work_date);
     if (!nurse || !mappedShift) {
-      console.warn('[Hospithro] Skipped:', entry.staff_name, '| shift:', entry.shift_code, '| mapped:', mappedShift);
+      console.warn('[Hospithro] Skipped row - staff_name:', JSON.stringify(entry.staff_name),
+        '| normalized:', normalizeName(entry.staff_name),
+        '| in map:', nurseByName.has(normalizeName(entry.staff_name)));
       return;
     }
 
