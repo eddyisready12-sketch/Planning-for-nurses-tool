@@ -280,6 +280,30 @@ function mapGroupNameToId(groupName: string, fallback?: StaffGroupId): StaffGrou
   return GROUP_NAME_TO_ID[groupName] || fallback || 'LIC_NOMBRADOS';
 }
 
+function inferGroupFromName(name: string, groupId: StaffGroupId): StaffGroupId {
+  const trimmedName = name.trim().toUpperCase();
+  const isTec = trimmedName.startsWith('TEC.');
+  const isLic = trimmedName.startsWith('LIC.');
+
+  if (isTec && groupId === 'LIC_NOMBRADOS') {
+    return 'TEC_NOMBRADOS';
+  }
+
+  if (isTec && groupId === 'LIC_CAS') {
+    return 'TEC_CAS';
+  }
+
+  if (isLic && groupId === 'TEC_NOMBRADOS') {
+    return 'LIC_NOMBRADOS';
+  }
+
+  if (isLic && groupId === 'TEC_CAS') {
+    return 'LIC_CAS';
+  }
+
+  return groupId;
+}
+
 function createNurseId(name: string, index: number) {
   return `${normalizeName(name).replace(/[^a-z0-9]+/g, '-')}-${index}`;
 }
@@ -437,7 +461,8 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
 
   const nurses = staffRows.map((row, index) => {
     const fallback = fallbackByName.get(normalizeName(row.full_name));
-    const groupId = mapGroupNameToId(row.group_name, fallback?.groupId);
+    const mappedGroupId = mapGroupNameToId(row.group_name, fallback?.groupId);
+    const groupId = inferGroupFromName(row.full_name, mappedGroupId);
     return {
       id: fallback?.id || createNurseId(row.full_name, index),
       name: row.full_name,
