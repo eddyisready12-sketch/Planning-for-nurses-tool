@@ -232,8 +232,10 @@ export default function App() {
   const rosterScrollRef = useRef<HTMLDivElement | null>(null);
   const rosterDragStateRef = useRef({
     isDragging: false,
+    isPointerDown: false,
     startX: 0,
     startScrollLeft: 0,
+    pointerId: -1,
   });
 
   useEffect(() => {
@@ -516,35 +518,47 @@ export default function App() {
     }
 
     rosterDragStateRef.current = {
-      isDragging: true,
+      isDragging: false,
+      isPointerDown: true,
       startX: event.clientX,
       startScrollLeft: container.scrollLeft,
+      pointerId: event.pointerId,
     };
-
-    container.setPointerCapture(event.pointerId);
-    container.style.cursor = 'grabbing';
-    container.style.userSelect = 'none';
   };
 
   const handleRosterPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const container = rosterScrollRef.current;
     const dragState = rosterDragStateRef.current;
-    if (!container || !dragState.isDragging) {
+    if (!container || !dragState.isPointerDown) {
       return;
     }
 
     const deltaX = event.clientX - dragState.startX;
+    if (!dragState.isDragging) {
+      if (Math.abs(deltaX) < 6) {
+        return;
+      }
+
+      dragState.isDragging = true;
+      container.setPointerCapture(event.pointerId);
+      container.style.cursor = 'grabbing';
+      container.style.userSelect = 'none';
+    }
+
     container.scrollLeft = dragState.startScrollLeft - deltaX;
   };
 
   const handleRosterPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     const container = rosterScrollRef.current;
-    if (!container || !rosterDragStateRef.current.isDragging) {
+    if (!container || !rosterDragStateRef.current.isPointerDown) {
       return;
     }
 
+    const wasDragging = rosterDragStateRef.current.isDragging;
     rosterDragStateRef.current.isDragging = false;
-    if (container.hasPointerCapture(event.pointerId)) {
+    rosterDragStateRef.current.isPointerDown = false;
+    rosterDragStateRef.current.pointerId = -1;
+    if (wasDragging && container.hasPointerCapture(event.pointerId)) {
       container.releasePointerCapture(event.pointerId);
     }
     container.style.cursor = 'grab';
