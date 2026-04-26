@@ -200,6 +200,20 @@ function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false)
   );
 }
 
+function isUnsavedOverride(nurse: Nurse, date: string) {
+  const overrideShift = nurse.overrides?.[date];
+  if (!overrideShift) {
+    return false;
+  }
+
+  const loadedShift = nurse.loadedMonthAssignments?.[date];
+  return !loadedShift || loadedShift !== overrideShift;
+}
+
+function countUnsavedOverrides(nurse: Nurse) {
+  return Object.keys(nurse.overrides || {}).filter((date) => isUnsavedOverride(nurse, date)).length;
+}
+
 function removeDateFromVacationRanges(ranges: Nurse['vacations'], targetDate: string) {
   const target = parseISO(targetDate);
 
@@ -235,16 +249,13 @@ function buildMonthlyRosterForDisplay(nurses: Nurse[], year: number, month: numb
   const endDate = endOfMonth(startDate);
   const days = eachDayOfInterval({ start: startDate, end: endDate });
 
-  return nurses.map((nurse) => {
-    const nurseDays = days.map((date) => {
-      const dateStr = format(date, 'yyyy-MM-dd');
-      const loadedShift = nurse.loadedMonthAssignments?.[dateStr];
-
-      return {
-        date: dateStr,
-        shift: loadedShift ?? getShiftForDate(nurse, date),
-      };
-    });
+    return nurses.map((nurse) => {
+      const nurseDays = days.map((date) => {
+        return {
+          date: format(date, 'yyyy-MM-dd'),
+          shift: getShiftForDate(nurse, date),
+        };
+      });
 
     const totalHours = nurseDays.reduce((sum, day) => sum + SHIFT_HOURS[day.shift], 0);
 
@@ -359,6 +370,17 @@ export default function App() {
     loadedMonthRef.current = monthKey;
     setIsHydrating(false);
   }, [currentDate]);
+
+  const reloadSpecificMonthFromSupabase = useCallback(async (date: Date, reason?: string) => {
+    setIsHydrating(true);
+    setSyncStatus(reason || 'Reloading saved data from Supabase...');
+    const result = await loadFromSupabase(date, INITIAL_NURSES);
+    setNurses(result.nurses);
+    setSyncStatus(result.status);
+    loadedMonthRef.current = format(date, 'yyyy-MM');
+    setIsHydrating(false);
+    return result;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -676,7 +698,7 @@ export default function App() {
       setIsSyncing(true);
       setSyncStatus('Saving roster to Supabase...');
       const result = await saveToSupabase(currentDate, nurses, roster);
-      setSyncStatus(`Saved ${result.staffCount} staff and ${result.assignmentCount} assignments for ${result.monthKey}.`);
+      await reloadSpecificMonthFromSupabase(currentDate, `Saved ${result.staffCount} staff and ${result.assignmentCount} assignments for ${result.monthKey}. Reloading saved month...`);
     } catch (error) {
       setSyncStatus(`Supabase save failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
@@ -741,7 +763,7 @@ export default function App() {
       setSyncStatus('Saving roster to Supabase...');
       const nextRoster = generateMonthlyRoster(nextNurses, currentDate.getFullYear(), currentDate.getMonth());
       const result = await saveToSupabase(currentDate, nextNurses, nextRoster);
-      setSyncStatus(`${successMessage} Saved ${result.staffCount} staff and ${result.assignmentCount} assignments for ${result.monthKey}.`);
+      await reloadSpecificMonthFromSupabase(currentDate, `${successMessage} Saved ${result.staffCount} staff and ${result.assignmentCount} assignments for ${result.monthKey}. Reloading saved month...`);
     } catch (error) {
       setSyncStatus(`Supabase save failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
@@ -941,8 +963,9 @@ export default function App() {
 
       if (getSupabaseConnectionSummary().configured) {
         const result = await saveToSupabase(importDate, nextNurses, nextRoster);
-        setSyncStatus(
-          `${mode === 'replace' ? 'Replaced' : 'Merged'} ${pendingImport.result.nurses.length} imported staff from ${pendingImport.fileName} and saved ${result.assignmentCount} assignments for ${result.monthKey}.${warningSuffix}`
+        await reloadSpecificMonthFromSupabase(
+          importDate,
+          `${mode === 'replace' ? 'Replaced' : 'Merged'} ${pendingImport.result.nurses.length} imported staff from ${pendingImport.fileName} and saved ${result.assignmentCount} assignments for ${result.monthKey}. Reloading saved month...${warningSuffix}`
         );
       } else {
         setSyncStatus(
@@ -1393,11 +1416,11 @@ export default function App() {
                                     });
                                   }}
                                 >
-                                  <div className={cn(
-                                    "font-mono transition-all duration-300",
-                                    row.nurse.overrides?.[day.date] && day.shift !== 'L' && "ring-2 ring-blue-400 ring-offset-1 rounded-md",
-                                    day.shift === 'L' && !birthday && "text-gray-300 group-hover:text-gray-400"
-                                  )}>
+                                    <div className={cn(
+                                      "font-mono transition-all duration-300",
+                                      isUnsavedOverride(row.nurse, day.date) && day.shift !== 'L' && "ring-2 ring-blue-400 ring-offset-1 rounded-md",
+                                      day.shift === 'L' && !birthday && "text-gray-300 group-hover:text-gray-400"
+                                    )}>
                                     {renderShiftMarker(day.shift, birthday)}
                                   </div>
                                 </td>
@@ -2226,7 +2249,7 @@ export default function App() {
                 </div>
                 <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100">
                   <div className="text-[10px] font-black uppercase tracking-widest text-amber-500">Manual overrides</div>
-                  <div className="mt-2 text-2xl font-bold text-amber-700">{Object.keys(selectedRosterMember.nurse.overrides || {}).length}</div>
+                    <div className="mt-2 text-2xl font-bold text-amber-700">{countUnsavedOverrides(selectedRosterMember.nurse)}</div>
                 </div>
               </div>
 
