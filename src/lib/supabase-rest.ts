@@ -166,6 +166,7 @@ const UI_TO_DB_SHIFT: Record<ShiftType, string> = {
   GN: 'N',
   M: 'M',
   T: 'T',
+  MT: 'MT',
   L: 'L',
   V: 'VAC',
   O: 'O',
@@ -176,6 +177,7 @@ const DB_TO_UI_SHIFT: Record<string, ShiftType | null> = {
   N: 'GN',
   M: 'M',
   T: 'T',
+  MT: 'MT',
   L: 'L',
   VAC: 'V',
   LIC: 'V',
@@ -363,6 +365,8 @@ function buildVacationBalanceRows(currentDate: Date, nurses: Nurse[], pageSlug: 
         const scheduledHours = SHIFT_HOURS[scheduledShift];
         if (scheduledShift === 'M' || scheduledShift === 'T') {
           usedDays += 0.5;
+        } else if (scheduledShift === 'MT') {
+          usedDays += 1;
         } else if (scheduledHours > 0) {
           usedDays += 1;
         }

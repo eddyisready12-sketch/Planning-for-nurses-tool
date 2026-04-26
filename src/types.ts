@@ -3,33 +3,35 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type ShiftType = 'GD' | 'GN' | 'M' | 'T' | 'L' | 'V' | 'O'; // Guardia Diurna, Guardia Nocturna, Mañana, Tarde, Libre, Vacation, Onomastico
+export type ShiftType = 'GD' | 'GN' | 'M' | 'T' | 'MT' | 'L' | 'V' | 'O';
 
 export interface VacationRange {
-  start: string; // ISO Date
-  end: string;   // ISO Date
+  start: string;
+  end: string;
 }
 
-export type StaffGroupId = 
-  | 'LIC_NOMBRADOS' 
-  | 'LIC_CAS' 
-  | 'TEC_NOMBRADOS' 
-  | 'TEC_CAS' 
-  | 'SUPERVISORA' 
-  | 'DESTACADO' 
+export type StaffGroupId =
+  | 'LIC_NOMBRADOS'
+  | 'LIC_CAS'
+  | 'TEC_NOMBRADOS'
+  | 'TEC_CAS'
+  | 'SUPERVISORA'
+  | 'DESTACADO'
   | 'REEMPLAZO';
+
+export type StaffRole = 'Licenciada' | 'TÃ©cnico' | 'Técnico' | 'Supervisora';
 
 export interface Nurse {
   id: string;
   name: string;
-  role: 'Licenciada' | 'Técnico' | 'Supervisora';
+  role: StaffRole;
   groupId: StaffGroupId;
-  teamId: number; // 0-4 for the 5-day cycle
+  teamId: number;
   archived?: boolean;
   birthDate?: string;
   vacations: VacationRange[];
-  hiringDate: string; // To calculate the start of their cycle
-  overrides?: Record<string, ShiftType>; // Key is ISO date string 'YYYY-MM-DD'
+  hiringDate: string;
+  overrides?: Record<string, ShiftType>;
 }
 
 export interface RosterDay {

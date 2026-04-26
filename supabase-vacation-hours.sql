@@ -10,13 +10,13 @@ select
   ra.month_key,
   ra.staff_name,
   ra.group_name,
-  count(*) filter (where ra.shift_code in ('D', 'N', 'M', 'T')) as worked_shifts,
+  count(*) filter (where ra.shift_code in ('D', 'N', 'M', 'T', 'MT')) as worked_shifts,
   count(*) filter (where ra.shift_code = 'VAC') as vacation_days,
   count(*) filter (where ra.shift_code = 'VAC' and ra.credited_hours > 0) as vacation_work_days,
   count(*) filter (where ra.shift_code = 'LIC') as license_days,
   count(*) filter (where ra.shift_code = 'O') as special_days,
   count(*) filter (where ra.shift_code = 'L') as off_days,
-  coalesce(sum(case when ra.shift_code in ('D', 'N', 'M', 'T') then ra.credited_hours else 0 end), 0) as worked_hours,
+  coalesce(sum(case when ra.shift_code in ('D', 'N', 'M', 'T', 'MT') then ra.credited_hours else 0 end), 0) as worked_hours,
   coalesce(sum(case when ra.shift_code = 'VAC' then ra.credited_hours else 0 end), 0) as vacation_hours,
   coalesce(sum(case when ra.shift_code = 'LIC' then ra.credited_hours else 0 end), 0) as license_hours,
   coalesce(sum(case when ra.shift_code = 'O' then ra.credited_hours else 0 end), 0) as special_hours,
@@ -26,6 +26,7 @@ select
     when ra.scheduled_shift_code = 'N' then 12
     when ra.scheduled_shift_code = 'M' then 6
     when ra.scheduled_shift_code = 'T' then 6
+    when ra.scheduled_shift_code = 'MT' then 12
     else 0
   end), 0) as planned_hours,
   coalesce(sum(ra.credited_hours), 0) as credited_hours_total,
@@ -34,6 +35,7 @@ select
     when ra.scheduled_shift_code = 'N' then 12
     when ra.scheduled_shift_code = 'M' then 6
     when ra.scheduled_shift_code = 'T' then 6
+    when ra.scheduled_shift_code = 'MT' then 12
     else 0
   end), 0) as balance_hours
 from public.roster_assignments ra

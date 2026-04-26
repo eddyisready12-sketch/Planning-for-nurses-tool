@@ -67,13 +67,22 @@ function formatVacationDays(value: number) {
 }
 
 function isWorkShift(shift: ShiftType) {
-  return shift === 'GD' || shift === 'GN' || shift === 'M' || shift === 'T';
+  return shift === 'GD' || shift === 'GN' || shift === 'M' || shift === 'T' || shift === 'MT';
+}
+
+function includesMorningShift(shift: ShiftType) {
+  return shift === 'M' || shift === 'MT';
+}
+
+function includesAfternoonShift(shift: ShiftType) {
+  return shift === 'T' || shift === 'MT';
 }
 
 function getShiftDisplayLabel(shift: ShiftType) {
   if (shift === 'V') return 'VAC';
   if (shift === 'GD') return 'D';
   if (shift === 'GN') return 'N';
+  if (shift === 'MT') return 'M/T';
   if (shift === 'L') return '-';
   return shift;
 }
@@ -84,6 +93,7 @@ function getShiftBadgeClasses(shift: ShiftType) {
     shift === 'GN' && "bg-indigo-900 text-white shadow-xl ring-1 ring-indigo-950",
     shift === 'M' && "bg-teal-50 text-teal-700 shadow-sm ring-1 ring-teal-100",
     shift === 'T' && "bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100",
+    shift === 'MT' && "bg-gradient-to-b from-teal-50 to-orange-50 text-slate-700 shadow-sm ring-1 ring-slate-200",
     shift === 'O' && "bg-amber-100 text-amber-700 shadow-sm ring-1 ring-amber-200",
     shift === 'L' && "bg-gray-100 text-gray-400 ring-1 ring-gray-100",
     shift === 'V' && "bg-rose-100 text-rose-800 ring-1 ring-rose-200"
@@ -92,6 +102,42 @@ function getShiftBadgeClasses(shift: ShiftType) {
 
 function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false) {
   const label = getShiftDisplayLabel(shift);
+
+  if (shift === 'MT') {
+    return (
+      <div className={cn(
+        "relative overflow-hidden rounded-md pointer-events-none",
+        compact ? "inline-flex min-w-[44px] px-2 py-1.5" : "w-full h-8",
+        getShiftBadgeClasses(shift)
+      )}>
+        <div className="absolute inset-x-0 top-1/2 border-t border-white/90 pointer-events-none" />
+        <div className={cn(
+          "absolute left-0 right-0 top-[2px] text-center font-black text-teal-700 pointer-events-none",
+          compact ? "text-[10px]" : "text-[9px]"
+        )}>
+          M
+        </div>
+        <div className={cn(
+          "absolute left-0 right-0 bottom-[2px] text-center font-black text-orange-700 pointer-events-none",
+          compact ? "text-[10px]" : "text-[9px]"
+        )}>
+          T
+        </div>
+        {birthday && (
+          <>
+            <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(135deg,transparent_48%,rgba(255,255,255,0.95)_49%,rgba(255,255,255,0.95)_51%,transparent_52%)]" />
+            <div className="absolute right-0 top-0 h-0 w-0 pointer-events-none border-l-[16px] border-l-transparent border-t-[16px] border-t-amber-200" />
+            <div className={cn(
+              "absolute right-1 top-0.5 font-black text-amber-700 pointer-events-none",
+              compact ? "text-[9px]" : "text-[8px]"
+            )}>
+              O
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   if (birthday && isWorkShift(shift)) {
     return (
@@ -368,6 +414,9 @@ export default function App() {
       if (originalShift === 'M' || originalShift === 'T') {
         return sum + 0.5;
       }
+      if (originalShift === 'MT') {
+        return sum + 1;
+      }
       return sum + (SHIFT_HOURS[originalShift] > 0 ? 1 : 0);
     }, 0);
 
@@ -394,6 +443,8 @@ export default function App() {
         yearlyVacationHours += originalHours;
         if (originalShift === 'M' || originalShift === 'T') {
           yearlyVacationWorkDays += 0.5;
+        } else if (originalShift === 'MT') {
+          yearlyVacationWorkDays += 1;
         } else if (originalHours > 0) {
           yearlyVacationWorkDays += 1;
         }
@@ -468,8 +519,8 @@ export default function App() {
           if (isLic) licGN++;
           else if (isTec) tecGN++;
         }
-        if (dayShift === 'M') mCount++;
-        if (dayShift === 'T') tCount++;
+        if (includesMorningShift(dayShift || 'L')) mCount++;
+        if (includesAfternoonShift(dayShift || 'L')) tCount++;
       });
       return { 
         date: dateStr, 
@@ -1028,6 +1079,10 @@ export default function App() {
                 <span className="text-gray-600 font-medium">{t.afternoon} (6h)</span>
               </div>
               <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+                <span className="w-10 h-6 flex items-center justify-center rounded bg-gradient-to-b from-teal-50 to-orange-50 text-slate-700 font-bold border border-slate-200 text-[10px]">M/T</span>
+                <span className="text-gray-600 font-medium">Morning + Afternoon (12h)</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
                 <span className="w-8 h-6 flex items-center justify-center rounded bg-amber-100 text-amber-700 font-bold border border-amber-200">O</span>
                 <span className="text-gray-600 font-medium">{t.birthday}</span>
               </div>
@@ -1183,10 +1238,10 @@ export default function App() {
                             {row.days.filter(d => d.shift === 'GN').length}
                           </td>
                           <td className="p-2 text-center font-mono text-[11px] text-gray-600 border-r border-[#E5E5E1] bg-gray-50/20">
-                            {row.days.filter(d => d.shift === 'M').length}
+                            {row.days.filter(d => includesMorningShift(d.shift)).length}
                           </td>
                           <td className="p-2 text-center font-mono text-[11px] text-gray-600 border-r border-[#E5E5E1] bg-gray-50/20">
-                            {row.days.filter(d => d.shift === 'T').length}
+                            {row.days.filter(d => includesAfternoonShift(d.shift)).length}
                           </td>
                           <td className="p-2 text-center font-mono text-[11px] text-indigo-700 border-r border-[#E5E5E1] bg-indigo-50/30 font-black">
                             {row.days.filter(d => d.shift === 'GN' && format(parseISO(d.date), 'EEEEEE') === 'Su').length}
@@ -1607,7 +1662,7 @@ export default function App() {
               <div className="px-3 py-1.5 text-[9px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50 mb-1">
                 {t.setShift}
               </div>
-              {(['GD', 'GN', 'M', 'T', 'O', 'L', 'V'] as ShiftType[]).map(s => (
+              {(['GD', 'GN', 'M', 'T', 'MT', 'O', 'L', 'V'] as ShiftType[]).map(s => (
                 <button
                   key={s}
                   onClick={() => {
@@ -1622,14 +1677,15 @@ export default function App() {
                     s === 'GN' && "bg-indigo-900 text-white",
                     s === 'M' && "bg-teal-50 text-teal-700",
                     s === 'T' && "bg-orange-50 text-orange-700",
+                    s === 'MT' && "bg-gradient-to-b from-teal-50 to-orange-50 text-slate-700",
                     s === 'O' && "bg-amber-100 text-amber-700",
                     s === 'L' && "bg-gray-100 text-gray-400",
                     s === 'V' && "bg-rose-100 text-rose-800"
                   )}>
-                    {s === 'GD' ? 'D' : (s === 'GN' ? 'N' : (s === 'V' ? 'VAC' : s))}
+                    {s === 'GD' ? 'D' : (s === 'GN' ? 'N' : (s === 'V' ? 'VAC' : (s === 'MT' ? 'M/T' : s)))}
                   </div>
                   <span className="text-xs font-medium text-gray-700">
-                    {lang === 'es' ? SHIFT_LABELS[s].split('(')[0] : s}
+                    {SHIFT_LABELS[s]}
                   </span>
                 </button>
               ))}
