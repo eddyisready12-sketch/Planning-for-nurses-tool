@@ -45,7 +45,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import { Nurse, NurseRoster, ShiftType } from './types';
 import { SHIFT_COLORS, SHIFT_LABELS, SHIFT_HOURS } from './constants';
-import { generateMonthlyRoster, getShiftForDate } from './lib/roster-logic';
+import { generateMonthlyRoster, getShiftForDate, isBirthdayForDate } from './lib/roster-logic';
 import { TRANSLATIONS, Language } from './lib/translations';
 import {
   clearSupabaseBrowserConfig,
@@ -64,6 +64,81 @@ const ADMIN_MODE_STORAGE_KEY = 'hospithro.admin-mode';
 
 function formatVacationDays(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function isWorkShift(shift: ShiftType) {
+  return shift === 'GD' || shift === 'GN' || shift === 'M' || shift === 'T';
+}
+
+function getShiftDisplayLabel(shift: ShiftType) {
+  if (shift === 'V') return 'VAC';
+  if (shift === 'GD') return 'D';
+  if (shift === 'GN') return 'N';
+  if (shift === 'L') return '-';
+  return shift;
+}
+
+function getShiftBadgeClasses(shift: ShiftType) {
+  return cn(
+    shift === 'GD' && "bg-blue-100 text-blue-700 shadow-sm ring-1 ring-blue-200",
+    shift === 'GN' && "bg-indigo-900 text-white shadow-xl ring-1 ring-indigo-950",
+    shift === 'M' && "bg-teal-50 text-teal-700 shadow-sm ring-1 ring-teal-100",
+    shift === 'T' && "bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100",
+    shift === 'O' && "bg-amber-100 text-amber-700 shadow-sm ring-1 ring-amber-200",
+    shift === 'L' && "bg-gray-100 text-gray-400 ring-1 ring-gray-100",
+    shift === 'V' && "bg-rose-100 text-rose-800 ring-1 ring-rose-200"
+  );
+}
+
+function renderShiftMarker(shift: ShiftType, birthday: boolean, compact = false) {
+  const label = getShiftDisplayLabel(shift);
+
+  if (birthday && isWorkShift(shift)) {
+    return (
+      <div className={cn(
+        "relative overflow-hidden rounded-md",
+        compact ? "inline-flex min-w-[44px] px-3 py-2" : "w-full h-8",
+        getShiftBadgeClasses(shift)
+      )}>
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_48%,rgba(255,255,255,0.95)_49%,rgba(255,255,255,0.95)_51%,transparent_52%)]" />
+        <div className={cn(
+          "absolute left-1 font-black",
+          compact ? "bottom-1 text-[11px]" : "bottom-0.5 text-[10px]"
+        )}>
+          {label}
+        </div>
+        <div className="absolute right-0 top-0 h-0 w-0 border-l-[16px] border-l-transparent border-t-[16px] border-t-amber-200" />
+        <div className={cn(
+          "absolute right-1 top-0.5 font-black text-amber-700",
+          compact ? "text-[9px]" : "text-[8px]"
+        )}>
+          O
+        </div>
+      </div>
+    );
+  }
+
+  if (birthday && shift === 'L') {
+    return (
+      <div className={cn(
+        "flex items-center justify-center rounded-md font-black",
+        compact ? "inline-flex min-w-[44px] px-3 py-2 text-xs" : "w-full h-8 text-[10px]",
+        getShiftBadgeClasses('O')
+      )}>
+        O
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn(
+      "flex items-center justify-center rounded-md font-black",
+      compact ? "inline-flex min-w-[44px] px-3 py-2 text-xs" : "w-full h-8 text-[10px]",
+      getShiftBadgeClasses(shift)
+    )}>
+      {label}
+    </div>
+  );
 }
 
 function removeDateFromVacationRanges(ranges: Nurse['vacations'], targetDate: string) {
@@ -1050,41 +1125,40 @@ export default function App() {
                             </div>
                           </td>
                           {row.days.map((day, idx) => (
-                            <td 
-                              key={idx} 
-                              className={cn(
-                                "p-1.5 border-r border-[#E5E5E1] transition-all relative",
-                                isPastLockedDate(day.date) ? "cursor-not-allowed opacity-80" : "cursor-pointer",
-                                format(parseISO(day.date), 'EEEEEE') === 'Su' ? "bg-red-50/10" : ""
-                              )}
-                              onClick={(e) => {
-                                if (isPastLockedDate(day.date)) {
-                                  setSyncStatus('Past dates are locked. Enable admin mode to edit past days.');
-                                  return;
-                                }
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setActiveEditCell({
-                                  nurseId: row.nurse.id,
-                                  date: day.date,
-                                  x: rect.left,
-                                  y: rect.bottom
-                                });
-                              }}
-                            >
-                              <div className={cn(
-                                "w-full h-8 flex items-center justify-center rounded-md font-mono text-[10px] font-bold transition-all duration-300",
-                                row.nurse.overrides?.[day.date] && day.shift !== 'L' && "ring-2 ring-blue-400 ring-offset-1",
-                                day.shift === 'GD' && "bg-blue-100 text-blue-700 shadow-sm ring-1 ring-blue-200",
-                                day.shift === 'GN' && "bg-indigo-900 text-white shadow-xl ring-1 ring-indigo-950",
-                                day.shift === 'M' && "bg-teal-50 text-teal-700 shadow-sm ring-1 ring-teal-100",
-                                day.shift === 'T' && "bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100",
-                                day.shift === 'O' && "bg-amber-100 text-amber-700 shadow-sm ring-1 ring-amber-200",
-                                day.shift === 'L' && "text-gray-300 group-hover:text-gray-400",
-                                day.shift === 'V' && "bg-rose-100 text-rose-800 text-[10px] uppercase font-black ring-1 ring-rose-200"
-                              )}>
-                                {day.shift === 'V' ? 'VAC' : (day.shift === 'L' ? '-' : (day.shift === 'GD' ? 'D' : (day.shift === 'GN' ? 'N' : day.shift)))}
-                              </div>
-                            </td>
+                            (() => {
+                              const birthday = day.shift !== 'V' && day.shift !== 'O' && isBirthdayForDate(row.nurse, parseISO(day.date));
+                              return (
+                                <td 
+                                  key={idx} 
+                                  className={cn(
+                                    "p-1.5 border-r border-[#E5E5E1] transition-all relative",
+                                    isPastLockedDate(day.date) ? "cursor-not-allowed opacity-80" : "cursor-pointer",
+                                    format(parseISO(day.date), 'EEEEEE') === 'Su' ? "bg-red-50/10" : ""
+                                  )}
+                                  onClick={(e) => {
+                                    if (isPastLockedDate(day.date)) {
+                                      setSyncStatus('Past dates are locked. Enable admin mode to edit past days.');
+                                      return;
+                                    }
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setActiveEditCell({
+                                      nurseId: row.nurse.id,
+                                      date: day.date,
+                                      x: rect.left,
+                                      y: rect.bottom
+                                    });
+                                  }}
+                                >
+                                  <div className={cn(
+                                    "font-mono transition-all duration-300",
+                                    row.nurse.overrides?.[day.date] && day.shift !== 'L' && "ring-2 ring-blue-400 ring-offset-1 rounded-md",
+                                    day.shift === 'L' && !birthday && "text-gray-300 group-hover:text-gray-400"
+                                  )}>
+                                    {renderShiftMarker(day.shift, birthday)}
+                                  </div>
+                                </td>
+                              );
+                            })()
                           ))}
                            <td className="p-2 text-center font-mono text-[11px] text-gray-600 border-r border-[#E5E5E1] bg-gray-50/20">
                             {row.days.filter(d => d.shift === 'GD').length}
@@ -1102,7 +1176,7 @@ export default function App() {
                             {row.days.filter(d => d.shift === 'GN' && format(parseISO(d.date), 'EEEEEE') === 'Su').length}
                           </td>
                           <td className="p-2 text-center font-mono text-[11px] text-gray-600 border-r border-[#E5E5E1] bg-gray-50/20">
-                            {row.days.filter(d => d.shift === 'O').length}
+                            {row.days.filter((d) => d.shift === 'O' || (d.shift !== 'V' && isBirthdayForDate(row.nurse, parseISO(d.date)))).length}
                           </td>
                           <td className="p-2 text-center font-mono text-[11px] text-blue-700 border-r border-[#E5E5E1] bg-blue-50/30 font-black">
                             {row.days.filter(d => d.shift === 'GD' && format(parseISO(d.date), 'EEEEEE') === 'Su').length}
@@ -1900,48 +1974,42 @@ export default function App() {
                 <section className="p-6 rounded-3xl border border-gray-100 bg-white shadow-sm">
                   <h4 className="text-xs font-black uppercase tracking-[0.25em] text-gray-400 mb-4">Monthly overview</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {selectedRosterMember.days.map((day) => (
-                      <button
-                        key={day.date}
-                        type="button"
-                        disabled={isPastLockedDate(day.date)}
-                        onClick={(e) => {
-                          if (isPastLockedDate(day.date)) {
-                            setSyncStatus('Past dates are locked. Enable admin mode to edit past days.');
-                            return;
-                          }
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setActiveEditCell({
-                            nurseId: selectedRosterMember.nurse.id,
-                            date: day.date,
-                            x: rect.left,
-                            y: rect.bottom,
-                          });
-                        }}
-                        className={cn(
-                          "p-3 rounded-2xl border border-gray-100 bg-gray-50/50 text-left transition-colors",
-                          isPastLockedDate(day.date)
-                            ? "cursor-not-allowed opacity-70"
-                            : "hover:border-blue-200 hover:bg-blue-50/30 cursor-pointer"
-                        )}
-                      >
-                        <div className="text-[10px] uppercase font-black tracking-widest text-gray-400">
-                          {format(parseISO(day.date), 'EEE dd')}
-                        </div>
-                        <div className={cn(
-                          "mt-2 inline-flex min-w-[44px] justify-center rounded-xl px-3 py-2 text-xs font-black",
-                          day.shift === 'GD' && "bg-blue-100 text-blue-700",
-                          day.shift === 'GN' && "bg-indigo-900 text-white",
-                          day.shift === 'M' && "bg-teal-50 text-teal-700",
-                          day.shift === 'T' && "bg-orange-50 text-orange-700",
-                          day.shift === 'O' && "bg-amber-100 text-amber-700",
-                          day.shift === 'V' && "bg-rose-100 text-rose-800",
-                          day.shift === 'L' && "bg-gray-100 text-gray-500"
-                        )}>
-                          {day.shift === 'V' ? 'VAC' : day.shift === 'GD' ? 'D' : day.shift === 'GN' ? 'N' : day.shift}
-                        </div>
-                      </button>
-                    ))}
+                    {selectedRosterMember.days.map((day) => {
+                      const birthday = day.shift !== 'V' && day.shift !== 'O' && isBirthdayForDate(selectedRosterMember.nurse, parseISO(day.date));
+                      return (
+                        <button
+                          key={day.date}
+                          type="button"
+                          disabled={isPastLockedDate(day.date)}
+                          onClick={(e) => {
+                            if (isPastLockedDate(day.date)) {
+                              setSyncStatus('Past dates are locked. Enable admin mode to edit past days.');
+                              return;
+                            }
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setActiveEditCell({
+                              nurseId: selectedRosterMember.nurse.id,
+                              date: day.date,
+                              x: rect.left,
+                              y: rect.bottom,
+                            });
+                          }}
+                          className={cn(
+                            "p-3 rounded-2xl border border-gray-100 bg-gray-50/50 text-left transition-colors",
+                            isPastLockedDate(day.date)
+                              ? "cursor-not-allowed opacity-70"
+                              : "hover:border-blue-200 hover:bg-blue-50/30 cursor-pointer"
+                          )}
+                        >
+                          <div className="text-[10px] uppercase font-black tracking-widest text-gray-400">
+                            {format(parseISO(day.date), 'EEE dd')}
+                          </div>
+                          <div className="mt-2">
+                            {renderShiftMarker(day.shift, birthday, true)}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </section>
               </div>

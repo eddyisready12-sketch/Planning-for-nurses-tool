@@ -2,6 +2,13 @@ import { format, addDays, differenceInDays, parseISO, startOfMonth, endOfMonth, 
 import { Nurse, NurseRoster, RosterDay, ShiftType } from '../types';
 import { ROTATION_PATTERN, SHIFT_HOURS } from '../constants';
 
+export function isBirthdayForDate(nurse: Nurse, date: Date) {
+  return Boolean(
+    nurse.birthDate &&
+    format(parseISO(nurse.birthDate), 'MM-dd') === format(date, 'MM-dd')
+  );
+}
+
 export function getShiftForDate(nurse: Nurse, date: Date): ShiftType {
   const dateStr = format(date, 'yyyy-MM-dd');
   
@@ -17,10 +24,6 @@ export function getShiftForDate(nurse: Nurse, date: Date): ShiftType {
     if (isWithinInterval(date, { start, end })) {
       return 'V';
     }
-  }
-
-  if (nurse.birthDate && format(parseISO(nurse.birthDate), 'MM-dd') === format(date, 'MM-dd')) {
-    return 'O';
   }
 
   // Calculate day in rotation
