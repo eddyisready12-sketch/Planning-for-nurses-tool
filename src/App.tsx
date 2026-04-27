@@ -244,6 +244,20 @@ function removeDateFromVacationRanges(ranges: Nurse['vacations'], targetDate: st
   });
 }
 
+function getDisplayShiftForDate(nurse: Nurse, date: Date): ShiftType {
+  const dateStr = format(date, 'yyyy-MM-dd');
+
+  if (nurse.loadedMonthAssignments && dateStr in nurse.loadedMonthAssignments) {
+    return nurse.loadedMonthAssignments[dateStr];
+  }
+
+  if (nurse.overrides && dateStr in nurse.overrides) {
+    return nurse.overrides[dateStr];
+  }
+
+  return getShiftForDate(nurse, date);
+}
+
 function buildMonthlyRosterForDisplay(nurses: Nurse[], year: number, month: number): NurseRoster[] {
   const startDate = startOfMonth(new Date(year, month));
   const endDate = endOfMonth(startDate);
@@ -253,7 +267,7 @@ function buildMonthlyRosterForDisplay(nurses: Nurse[], year: number, month: numb
       const nurseDays = days.map((date) => {
         return {
           date: format(date, 'yyyy-MM-dd'),
-          shift: getShiftForDate(nurse, date),
+          shift: getDisplayShiftForDate(nurse, date),
         };
       });
 
