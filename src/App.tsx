@@ -247,12 +247,17 @@ function removeDateFromVacationRanges(ranges: Nurse['vacations'], targetDate: st
 function getDisplayShiftForDate(nurse: Nurse, date: Date): ShiftType {
   const dateStr = format(date, 'yyyy-MM-dd');
 
-  if (nurse.loadedMonthAssignments && dateStr in nurse.loadedMonthAssignments) {
-    return nurse.loadedMonthAssignments[dateStr];
+  if (nurse.overrides && dateStr in nurse.overrides) {
+    const overrideShift = nurse.overrides[dateStr];
+    const loadedShift = nurse.loadedMonthAssignments?.[dateStr];
+
+    if (!(nurse.loadedMonthAssignments && dateStr in nurse.loadedMonthAssignments) || overrideShift !== loadedShift) {
+      return overrideShift;
+    }
   }
 
-  if (nurse.overrides && dateStr in nurse.overrides) {
-    return nurse.overrides[dateStr];
+  if (nurse.loadedMonthAssignments && dateStr in nurse.loadedMonthAssignments) {
+    return nurse.loadedMonthAssignments[dateStr];
   }
 
   return getShiftForDate(nurse, date);
