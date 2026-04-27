@@ -329,6 +329,11 @@ export default function App() {
     [nurses]
   );
 
+  const hasUnsavedRosterChanges = useMemo(
+    () => activeNurses.some((nurse) => countUnsavedOverrides(nurse) > 0),
+    [activeNurses]
+  );
+
   const roster = useMemo(() => {
     return buildMonthlyRosterForDisplay(activeNurses, currentDate.getFullYear(), currentDate.getMonth());
   }, [activeNurses, currentDate]);
@@ -409,6 +414,10 @@ export default function App() {
       }
 
       realtimeRefreshTimerRef.current = window.setTimeout(() => {
+        if (hasUnsavedRosterChanges || activeEditCell) {
+          return;
+        }
+
         loadedMonthRef.current = null;
         void loadCurrentMonthFromSupabase({
           force: true,
@@ -427,7 +436,7 @@ export default function App() {
       }
       subscription?.unsubscribe();
     };
-  }, [currentDate, loadCurrentMonthFromSupabase, supabaseUrl, supabaseAnonKey, supabasePageSlug]);
+  }, [activeEditCell, currentDate, hasUnsavedRosterChanges, loadCurrentMonthFromSupabase, supabaseUrl, supabaseAnonKey, supabasePageSlug]);
 
   useEffect(() => {
     if (!getSupabaseConnectionSummary().configured) {
@@ -435,7 +444,7 @@ export default function App() {
     }
 
     const refreshLiveMonth = () => {
-      if (document.hidden || isHydrating || isSyncing) {
+      if (document.hidden || isHydrating || isSyncing || hasUnsavedRosterChanges || activeEditCell) {
         return;
       }
 
@@ -466,7 +475,7 @@ export default function App() {
       }
       window.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [currentDate, isHydrating, isSyncing, loadCurrentMonthFromSupabase, supabaseUrl, supabaseAnonKey, supabasePageSlug]);
+  }, [activeEditCell, currentDate, hasUnsavedRosterChanges, isHydrating, isSyncing, loadCurrentMonthFromSupabase, supabaseUrl, supabaseAnonKey, supabasePageSlug]);
 
   const filteredRoster = useMemo(() => {
     return roster.filter(item => {

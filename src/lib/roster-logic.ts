@@ -12,9 +12,15 @@ export function isBirthdayForDate(nurse: Nurse, date: Date) {
 export function getShiftForDate(nurse: Nurse, date: Date): ShiftType {
   const dateStr = format(date, 'yyyy-MM-dd');
   
-  // Check for manual overrides first
+  // Only treat overrides as manual/local when they differ from what was loaded
+  // for the current month from Supabase.
   if (nurse.overrides && dateStr in nurse.overrides) {
-    return nurse.overrides[dateStr];
+    const overrideShift = nurse.overrides[dateStr];
+    const loadedShift = nurse.loadedMonthAssignments?.[dateStr];
+
+    if (!(nurse.loadedMonthAssignments && dateStr in nurse.loadedMonthAssignments) || overrideShift !== loadedShift) {
+      return overrideShift;
+    }
   }
 
   // When a month has been loaded from Supabase, the saved assignment for that

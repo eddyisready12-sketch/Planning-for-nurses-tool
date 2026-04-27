@@ -567,11 +567,6 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       appendVacationRange(nurse, localWorkDate, localWorkDate);
     }
 
-    if (mappedShift !== 'VAC') {
-      nurse.overrides = nurse.overrides || {};
-      nurse.overrides[localWorkDate] = mappedShift;
-    }
-
     nurse.loadedMonthAssignments = nurse.loadedMonthAssignments || {};
     nurse.loadedMonthAssignments[localWorkDate] = mappedShift;
   });
