@@ -561,12 +561,15 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
       return;
     }
 
+    nurse.loadedMonthAssignments = nurse.loadedMonthAssignments || {};
+    nurse.loadedMonthAssignments[localWorkDate] = mappedShift;
+
+    nurse.overrides = nurse.overrides || {};
+    nurse.overrides[localWorkDate] = mappedShift;
+
     if (mappedShift === 'VAC') {
       appendVacationRange(nurse, localWorkDate, localWorkDate);
     }
-
-    nurse.loadedMonthAssignments = nurse.loadedMonthAssignments || {};
-    nurse.loadedMonthAssignments[localWorkDate] = mappedShift;
   });
 
   nurses.forEach((nurse) => {
