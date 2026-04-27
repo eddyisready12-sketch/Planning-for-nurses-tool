@@ -1030,14 +1030,14 @@ export default function App() {
     }
   };
 
-  const setManualShift = (nurseId: string, date: string, shift: ShiftType | null) => {
+  const setManualShift = async (nurseId: string, date: string, shift: ShiftType | null) => {
     if (!isAdminMode && startOfDay(parseISO(date)) < today) {
       setSyncStatus('Past dates are locked. Enable admin mode to edit past days.');
       setActiveEditCell(null);
       return;
     }
 
-    setNurses(nurses.map(n => {
+    const nextNurses = nurses.map(n => {
       if (n.id === nurseId) {
         const newOverrides = { ...(n.overrides || {}) };
         let newVacations = n.vacations;
@@ -1054,7 +1054,10 @@ export default function App() {
         return { ...n, vacations: newVacations, overrides: newOverrides };
       }
       return n;
-    }));
+    });
+
+    await persistNurseChanges(nextNurses, `Shift updated for ${date}.`);
+    setActiveEditCell(null);
   };
 
   const isPastLockedDate = (date: string) => !isAdminMode && startOfDay(parseISO(date)) < today;
