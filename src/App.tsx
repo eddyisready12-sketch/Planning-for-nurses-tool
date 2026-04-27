@@ -433,7 +433,7 @@ export default function App() {
       }
 
       realtimeRefreshTimerRef.current = window.setTimeout(() => {
-        if (hasUnsavedRosterChanges || activeEditCell) {
+        if (isSyncing || hasUnsavedRosterChanges || activeEditCell) {
           return;
         }
 
@@ -455,7 +455,7 @@ export default function App() {
       }
       subscription?.unsubscribe();
     };
-  }, [activeEditCell, currentDate, hasUnsavedRosterChanges, loadCurrentMonthFromSupabase, supabaseUrl, supabaseAnonKey, supabasePageSlug]);
+  }, [activeEditCell, currentDate, hasUnsavedRosterChanges, isSyncing, loadCurrentMonthFromSupabase, supabaseUrl, supabaseAnonKey, supabasePageSlug]);
 
   const filteredRoster = useMemo(() => {
     return roster.filter(item => {
