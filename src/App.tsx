@@ -438,45 +438,6 @@ export default function App() {
     };
   }, [activeEditCell, currentDate, hasUnsavedRosterChanges, loadCurrentMonthFromSupabase, supabaseUrl, supabaseAnonKey, supabasePageSlug]);
 
-  useEffect(() => {
-    if (!getSupabaseConnectionSummary().configured) {
-      return;
-    }
-
-    const refreshLiveMonth = () => {
-      if (document.hidden || isHydrating || isSyncing || hasUnsavedRosterChanges || activeEditCell) {
-        return;
-      }
-
-      loadedMonthRef.current = null;
-      void loadCurrentMonthFromSupabase({
-        force: true,
-        reason: 'Live sync: refreshing month from Supabase...'
-      }).catch((error) => {
-        setSyncStatus(`Supabase live sync failed: ${error.message || error}`);
-        setIsHydrating(false);
-      });
-    };
-
-    liveSyncIntervalRef.current = window.setInterval(refreshLiveMonth, 2000);
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        refreshLiveMonth();
-      }
-    };
-
-    window.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      if (liveSyncIntervalRef.current !== null) {
-        window.clearInterval(liveSyncIntervalRef.current);
-        liveSyncIntervalRef.current = null;
-      }
-      window.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [activeEditCell, currentDate, hasUnsavedRosterChanges, isHydrating, isSyncing, loadCurrentMonthFromSupabase, supabaseUrl, supabaseAnonKey, supabasePageSlug]);
-
   const filteredRoster = useMemo(() => {
     return roster.filter(item => {
       const matchSearch = item.nurse.name.toLowerCase().includes(searchQuery.toLowerCase());
