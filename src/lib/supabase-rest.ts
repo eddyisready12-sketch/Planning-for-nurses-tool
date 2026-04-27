@@ -506,8 +506,6 @@ export async function loadFromSupabase(currentDate: Date, fallbackNurses: Nurse[
   });
 
   const nurseByName = new Map(nurses.map((nurse) => [normalizeName(nurse.name), nurse]));
-  console.log('[Hospithro] Staff names in map:', Array.from(nurseByName.keys()));
-
   // Also create nurse stubs from assignment rows not matched to staff_members
   assignmentRows.forEach((entry) => {
     const key = normalizeName(entry.staff_name);
