@@ -239,6 +239,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const response = await fetch(`${url}/rest/v1/${path}`, {
     ...options,
+    cache: 'no-store',
     headers: getHeaders(options.headers as Record<string, string>),
   });
 
